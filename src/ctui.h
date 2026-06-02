@@ -8,7 +8,6 @@
 typedef struct {
   int height;
   int width;
-  WINDOW* default_win;
 } Application;
 
 // Container - the base for all other components
@@ -24,16 +23,6 @@ typedef struct {
   bool has_border;
   WINDOW* dwin;
 } Container;
-
-// Create a new application
-Application* create_app() {
-  Application* temp = (Application*)malloc(sizeof(Application));
-  if (temp == NULL) {
-    printf("Error while creating Application.\n");
-    exit(1);
-  }
-  return temp;
-}
 
 // Start ncurses and the Application instance
 //void init_app(Application* app) {
