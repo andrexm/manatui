@@ -20,7 +20,7 @@ int main() {
   container_init(con, stdscr);
 
   werase(con->dwin);
-  mvwprintw(con->dwin, 1, 1, "hello, container! welcome to another amazing library!");
+  container_print(con, 1, 1, "hello, welcome to my new library. It was written\ncompletely in %c and\n%s!", 'C', "ncurses");
   container_update(con, stdscr);
   getch();
   
