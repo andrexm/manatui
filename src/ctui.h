@@ -36,6 +36,7 @@ void init_app() {
   noecho();
   raw();
   cbreak();
+  keypad(stdscr, TRUE);
 }
 
 // End ncurses
@@ -131,3 +132,42 @@ void container_print(Container* con, int y, int x, const char* format, ...) {
   // 6. Freeing the memory
   free(buffer);
 }
+
+
+/**
+ * Buttons -----------------------------------------------------------------------------------------------------------
+ */
+typedef struct {
+  Container base;
+  char label[50];
+  void (*on_click)();
+} Button;
+
+// Creates a new button instance
+Button* button_create(WINDOW* parent, int h, int w, int y, int x, const char* label, void (*callback)()) {
+  Button* btn = (Button*)malloc(sizeof(Button));
+  if (btn == NULL) exit(1);
+
+  // set up base container
+  btn->base.height = h;
+  btn->base.width = w;
+  btn->base.start_y = y;
+  btn->base.start_x = x;
+
+  btn->base.dwin = derwin(parent, h, w, y, x);
+
+  box(btn->base.dwin, 0, 0);
+  container_print(&btn->base, 1, 1, " %s ", label);
+  btn->on_click = callback;
+  return btn;
+}
+
+Button* button_select(WINDOW* parent, Button* btn) {
+  box(btn->base.dwin, 0, 0);
+  move(btn->base.start_y + 1, btn->base.start_x + 1);
+}
+
+//
+
+// TODO: container_sprint() -> prints a Text<String>, you can set up the starting line to start from it to the end of the view!
+// NOTE: maybe this only make sense for text components.
