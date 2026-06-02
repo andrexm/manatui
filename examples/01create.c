@@ -3,19 +3,21 @@
 #include <stdio.h>
 
 int main() {
-  // Create a new application
-  Application* app = create_app();
-  WINDOW* win = newwin(LINES, COLS, 20, 10);
+  // You can use default ncurses methods
 
-  init_app(app);
+  // Start the application
+  init_app();
+  mvprintw(1, 1, "height: %d", LINES);
+  mvprintw(2, 1, "width: %d", COLS);
+  refresh();
+  getch();
 
-  wmove(app->default_win, 1, 1);
-  wprintw(app->default_win, "height: %d", app->height);
-  wmove(app->default_win, 2, 1);
-  wprintw(app->default_win, "width: %d", app->width);
-  wrefresh(app->default_win);
+  WINDOW* win = newwin(10, 10, 20, 10);
+  box(win, 0, 0);
+  wrefresh(win);
+
   getch();
   
-  end_app(app);
+  end_app();
   return 0;
 }
