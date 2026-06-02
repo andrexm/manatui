@@ -3,6 +3,7 @@
 #include "ncurses.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 // Application - where everything happens
 typedef struct {
@@ -70,4 +71,63 @@ void container_update(Container* con, WINDOW* parent) {
   wnoutrefresh(parent);
   wnoutrefresh(con->dwin);
   doupdate();
+}
+
+void container_print(Container* con, int y, int x, const char* format, ...) {
+  if (!con || !con->dwin) return;
+
+  va_list args;
+
+  // 1. Finding the size for the buffer
+  va_start(args, format);
+  // when we give NULL and 0, the function return the necessary size for our buffer! (without considering the '\0')
+  int necessary_size = vsnprintf(NULL, 0, format, args);
+  va_end(args);
+
+  if (necessary_size < 0) return; // formatation error
+
+  // 2. Alocating memory (considering the '\0')
+  char* buffer = (char*)malloc(necessary_size + 1);
+  if (buffer == NULL) return; // system memory error
+
+  // 3. Finally, truly formating the text
+  va_start(args, format);
+  vsnprintf(buffer, necessary_size + 1, format, args);
+  va_end(args);
+
+  // 4. Calculate the container internal limits
+  int max_y = con->height - 1;
+  int max_x = con->width - 1;
+
+  // put the cursor on the desired position
+  int cur_y = y;
+  int cur_x = x;
+  wmove(con->dwin, cur_y, cur_x);
+
+  // 5. Print each character considering the borders
+  for (int i = 0; buffer[i] != '\0'; i++) {
+    // if we have a \n
+    if (buffer[i] == '\n') {
+      cur_y++;
+      cur_x = 1; // go after the border
+      if (cur_y >= max_y) break; // avoid going after the container view ending
+      wmove(con->dwin, cur_y, cur_x);
+      continue;
+    }
+
+    // jump to next line if we find a right border
+    if (cur_x == max_x) {
+      cur_y++;
+      cur_x = 1;
+      if (cur_y >= max_y) break;
+      wmove(con->dwin, cur_y, cur_x);
+    }
+
+    // Draw the character and advance to the next column
+    waddch(con->dwin, buffer[i]);
+    cur_x++;
+  }
+
+  // 6. Freeing the memory
+  free(buffer);
 }
