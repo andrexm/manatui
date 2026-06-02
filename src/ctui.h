@@ -24,8 +24,12 @@ typedef struct {
   WINDOW* dwin;
 } Container;
 
-// Start ncurses and the Application instance
-//void init_app(Application* app) {
+
+/**
+ * Starting and Ending ---------------------------------------------------------------
+ */
+
+// Start ncurses
 void init_app() {
   initscr();
   noecho();
@@ -33,10 +37,14 @@ void init_app() {
   cbreak();
 }
 
-// End ncurses and the Application instance
+// End ncurses
 void end_app() {
   endwin();
 }
+
+/**
+ * Containers ------------------------------------------------------------------------
+ */
 
 // Working with base containers
 Container* container_create() {
