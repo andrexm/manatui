@@ -144,17 +144,17 @@ typedef struct {
 } Button;
 
 // Creates a new button instance
-Button* button_create(WINDOW* parent, int h, int w, int y, int x, const char* label, void (*callback)()) {
+Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)()) {
   Button* btn = (Button*)malloc(sizeof(Button));
   if (btn == NULL) exit(1);
 
   // set up base container
-  btn->base.height = h;
-  btn->base.width = w;
-  btn->base.start_y = y;
-  btn->base.start_x = x;
+  btn->base.height = height;
+  btn->base.width = width;
+  btn->base.start_y = start_y;
+  btn->base.start_x = start_x;
 
-  btn->base.dwin = derwin(parent, h, w, y, x);
+  btn->base.dwin = derwin(parent, height, width, start_y, start_x);
 
   box(btn->base.dwin, 0, 0);
   container_print(&btn->base, 1, 1, " %s ", label);
