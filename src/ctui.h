@@ -167,7 +167,6 @@ void container_print(Container* con, int y, int x, const char* format, ...) {
 typedef struct {
   Container base;
   char label[50];
-  //void (*on_click)(char c);
 } Button;
 
 // Creates a new button instance
