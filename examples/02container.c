@@ -4,7 +4,8 @@
 
 int main() {
   // Start the application
-  init_app();
+  Application* app;
+  init_app(app);
 
   // Create a container inside app
   Container* con = container_create();
