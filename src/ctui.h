@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ncurses.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -9,7 +10,7 @@
 
 // Container - the base for all other components
 typedef struct {
-  // dimensions of the Pad
+  // dimensions of the Derwin
   int height;
   int width;
 
@@ -36,7 +37,7 @@ typedef struct {
  */
 
 // Start ncurses
-Application* init_app() {
+Application* app_init() {
   initscr();
   noecho();
   raw();
@@ -67,9 +68,10 @@ void app_focus_on(Application* app, Container* con) {
 }
 
 // End ncurses
-void end_app() {
+void app_end() {
   endwin();
 }
+
 
 /**
  * Containers ------------------------------------------------------------------------
@@ -79,7 +81,6 @@ void end_app() {
 Container* container_create() {
   Container* temp = (Container*)malloc(sizeof(Container));
   if (temp == NULL) {
-    printf("Error while creating container.\n");
     exit(1);
   }
   return temp;
