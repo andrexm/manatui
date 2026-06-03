@@ -5,17 +5,12 @@
 int main() {
   // You can use default ncurses methods
 
+  Application* app;
   // Start the application
-  init_app();
+  init_app(app);
   mvprintw(1, 1, "height: %d", LINES);
   mvprintw(2, 1, "width: %d", COLS);
   refresh();
-  getch();
-
-  WINDOW* win = newwin(10, 10, 20, 10);
-  box(win, 0, 0);
-  wrefresh(win);
-
   getch();
   
   end_app();
