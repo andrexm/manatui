@@ -5,7 +5,7 @@
 int main() {
   // Start the application
   Application* app;
-  init_app(app);
+  app_init();
 
   // Create a container inside app
   Container* con = container_create();
@@ -25,6 +25,6 @@ int main() {
   container_update(con, stdscr);
   getch();
   
-  end_app();
+  app_end();
   return 0;
 }
