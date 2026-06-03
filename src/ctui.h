@@ -60,6 +60,12 @@ void app_add_container(Application* app, Container* con) {
   }
 }
 
+// Move the focus to the specified container
+void app_focus_on(Application* app, Container* con) {
+  if (con == NULL) return;
+  app->focused_container = con;
+}
+
 // End ncurses
 void end_app() {
   endwin();
@@ -183,14 +189,14 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   return btn;
 }
 
+// position the cursor inside the specified button and add it to the app->focused_container
 void button_select(Application* app, WINDOW* parent, Container* btn) {
   if (btn == NULL || btn->dwin == NULL) return;
 
   box(btn->dwin, 0, 0);
   wmove(btn->dwin, 1, 1);
   container_update(btn, parent);
-
-  app->focused_container = btn;
+  app_focus_on(app, btn);
 }
 
 //
