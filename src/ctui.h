@@ -5,11 +5,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-// Application - where everything happens
-typedef struct {
-  int height;
-  int width;
-} Application;
+#define MAX_CONTAINERS 50
 
 // Container - the base for all other components
 typedef struct {
@@ -22,21 +18,46 @@ typedef struct {
   int start_y;
 
   bool has_border;
+  void (*on_focus)(int);
   WINDOW* dwin;
 } Container;
 
+// Application - where everything happens
+typedef struct {
+  int height;
+  int width;
+  Container* container_list[MAX_CONTAINERS]; // a list for focusable containers
+  Container* focused_container;
+  int total_containers; // the amount of focused containers
+} Application;
 
 /**
  * Starting and Ending ---------------------------------------------------------------
  */
 
 // Start ncurses
-void init_app() {
+Application* init_app() {
   initscr();
   noecho();
   raw();
   cbreak();
   keypad(stdscr, TRUE);
+
+  Application* app = (Application*)malloc(sizeof(Application));
+  if (app == NULL) exit(1);
+
+  app->focused_container = NULL;
+  app->total_containers = 0;
+
+  return app;
+}
+
+// Adds a new container to the focusable list
+void app_add_container(Application* app, Container* con) {
+  if (app->total_containers < MAX_CONTAINERS) {
+    app->container_list[app->total_containers] = con;
+    app->total_containers++;
+  }
 }
 
 // End ncurses
@@ -140,11 +161,11 @@ void container_print(Container* con, int y, int x, const char* format, ...) {
 typedef struct {
   Container base;
   char label[50];
-  void (*on_click)();
+  //void (*on_click)(char c);
 } Button;
 
 // Creates a new button instance
-Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)()) {
+Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int)) {
   Button* btn = (Button*)malloc(sizeof(Button));
   if (btn == NULL) exit(1);
 
@@ -158,13 +179,18 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
 
   box(btn->base.dwin, 0, 0);
   container_print(&btn->base, 1, 1, " %s ", label);
-  btn->on_click = callback;
+  btn->base.on_focus = callback;
   return btn;
 }
 
-Button* button_select(WINDOW* parent, Button* btn) {
-  box(btn->base.dwin, 0, 0);
-  move(btn->base.start_y + 1, btn->base.start_x + 1);
+void button_select(Application* app, WINDOW* parent, Container* btn) {
+  if (btn == NULL || btn->dwin == NULL) return;
+
+  box(btn->dwin, 0, 0);
+  wmove(btn->dwin, 1, 1);
+  container_update(btn, parent);
+
+  app->focused_container = btn;
 }
 
 //
