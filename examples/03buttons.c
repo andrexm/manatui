@@ -28,7 +28,7 @@ void tab_buttons() {
 
 int main() {
   // Start the application
-  app = init_app();
+  app = app_init();
 
   // Create a container inside app
   Container* con = container_create();
@@ -75,6 +75,6 @@ int main() {
   }
 
   finish:
-  end_app();
+  app_end();
   return 0;
 }
