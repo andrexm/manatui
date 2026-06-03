@@ -7,12 +7,12 @@ int main() {
 
   Application* app;
   // Start the application
-  init_app(app);
+  app_init();
   mvprintw(1, 1, "height: %d", LINES);
   mvprintw(2, 1, "width: %d", COLS);
   refresh();
   getch();
   
-  end_app();
+  app_end();
   return 0;
 }
