@@ -9,9 +9,10 @@ Application* app;
 Button* btn;
 Button* btn2;
 
+// this function check each input when the button is focused (the name 'onclick' is because we only handle the enter key)
 void btn_onclick(int c) {
   if (c == 10) container_print(app->focused_container, 1, 1, " Clicked!!!");
-  container_update((Container*)btn2, stdscr);
+  container_update(app->focused_container, stdscr);
 }
 
 // move the cursor between each button after pressing TAB
@@ -53,8 +54,11 @@ int main() {
         break;
 
       case '\t':
-        button_select(app, stdscr, (Container*)btn2);
-        tab_buttons();
+        if (app->focused_container == (Container*)btn) {
+          button_select(app, stdscr, (Container*)btn2);
+        } else {
+          button_select(app, stdscr, (Container*)btn);
+        }
         continue;
         break;
 
