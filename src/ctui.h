@@ -77,18 +77,26 @@ void app_end() {
  * Containers ------------------------------------------------------------------------
  */
 
-// Working with base containers
-Container* container_create() {
-  Container* temp = (Container*)malloc(sizeof(Container));
-  if (temp == NULL) {
-    exit(1);
-  }
-  return temp;
-}
-
 // initialize a container inside a parent
 void container_init(Container* con, WINDOW* parent) {
   con->dwin = derwin(parent, con->height, con->width, con->start_y, con->start_x);
+}
+
+// Working with base containers
+Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, bool has_border, void (*callback)(int)) {
+  Container* temp = (Container*)malloc(sizeof(Container));
+  if (temp == NULL) exit(1);
+
+  temp->height = height;
+  temp->width = width;
+  temp->start_y = start_y;
+  temp->start_x = start_x;
+  temp->on_focus = callback;
+  temp->has_border = has_border;
+
+  // Initialize before printing any content inside it
+  container_init(temp, stdscr);
+  return temp;
 }
 
 // update the container after some change
@@ -198,8 +206,6 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
   container_update(btn, parent);
   app_focus_on(app, btn);
 }
-
-//
 
 // TODO: container_sprint() -> prints a Text<String>, you can set up the starting line to start from it to the end of the view!
 // NOTE: maybe this only make sense for text components.

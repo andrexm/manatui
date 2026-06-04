@@ -30,9 +30,6 @@ int main() {
   // Start the application
   app = app_init();
 
-  // Create a container inside app
-  Container* con = container_create();
-
   // Create a button inside app and initialize it
   btn = button_create(stdscr, 3, 12, START_Y, START_X, "click me", btn_onclick);
   container_update((Container*)btn, stdscr);

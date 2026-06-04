@@ -8,19 +8,10 @@ int main() {
   app_init();
 
   // Create a container inside app
-  Container* con = container_create();
-
-  // Set the container properties
-  con->height = 20;
-  con->width = 20;
-  con->start_x = 0;
-  con->start_y = 1;
-  con->has_border = TRUE;
-
-  // Initialize before printing any content inside it
-  container_init(con, stdscr);
+  Container* con = container_create(stdscr, 20, 20, 0, 1, TRUE, NULL);
 
   werase(con->dwin);
+  //box(con->dwin, 0, 0);
   container_print(con, 1, 1, "hello, welcome to my new library. It was written\ncompletely in %c and\n%s!", 'C', "ncurses");
   container_update(con, stdscr);
   getch();
