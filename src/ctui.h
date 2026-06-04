@@ -18,6 +18,7 @@ typedef struct {
   int start_x;
   int start_y;
 
+  const char* title;
   bool has_border;
   void (*on_focus)(int);
   WINDOW* dwin;
@@ -83,7 +84,7 @@ void container_init(Container* con, WINDOW* parent) {
 }
 
 // Working with base containers
-Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, bool has_border, void (*callback)(int)) {
+Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int)) {
   Container* temp = (Container*)malloc(sizeof(Container));
   if (temp == NULL) exit(1);
 
@@ -92,22 +93,12 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->start_y = start_y;
   temp->start_x = start_x;
   temp->on_focus = callback;
+  temp->title = title;
   temp->has_border = has_border;
 
   // Initialize before printing any content inside it
   container_init(temp, stdscr);
   return temp;
-}
-
-// update the container after some change
-void container_update(Container* con, WINDOW* parent) {
-  // first draw the borders if they exist
-  if (con->has_border) box(con->dwin, 0, 0);
-
-  // the update
-  wnoutrefresh(parent);
-  wnoutrefresh(con->dwin);
-  doupdate();
 }
 
 void container_print(Container* con, int y, int x, const char* format, ...) {
@@ -169,6 +160,26 @@ void container_print(Container* con, int y, int x, const char* format, ...) {
   free(buffer);
 }
 
+// update the container after some change
+void container_update(Container* con, WINDOW* parent) {
+  if (!con || !con->dwin) return;
+
+  // first draw the borders if they exist
+  if (con->has_border) {
+    box(con->dwin, 0, 0);
+
+    // print title if it has one
+    if (con->title != NULL && con->title[0] != '\0') {
+      container_print(con, 0, 2, "< %s >", con->title);
+    }
+  }
+
+  // the update
+  wnoutrefresh(parent);
+  wnoutrefresh(con->dwin);
+  doupdate();
+}
+
 
 /**
  * Buttons -----------------------------------------------------------------------------------------------------------
@@ -207,5 +218,50 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
   app_focus_on(app, btn);
 }
 
+
+/**
+ * Lists ------------------------------------------------------------------------------------------------------------
+ */
+
+typedef struct {
+  Container base;
+  char** content;
+  int selected;
+} List;
+ 
+// Creates a new list and returns its pointer
+List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int)) {
+  List* temp = (List*)malloc(sizeof(List));
+  if (temp == NULL) exit(1);
+
+  // init Container members
+  temp->base.height = height;
+  temp->base.width = width;
+  temp->base.start_y = start_y;
+  temp->base.start_x = start_x;
+  temp->base.has_border = has_border;
+  temp->base.on_focus = callback;
+  temp->base.title = title;
+
+  // init the List's derwin
+  container_init(&temp->base, parent);
+
+  // List properties
+  temp->content = NULL;
+  temp->selected = 0;
+
+  return temp;
+}
+
+// render the list component
+void list_render(List* list) {
+  container_update((Container*)list, stdscr);
+}
+
+void list_on_focus(int c) {
+  //
+}
+
 // TODO: container_sprint() -> prints a Text<String>, you can set up the starting line to start from it to the end of the view!
 // NOTE: maybe this only make sense for text components.
+
