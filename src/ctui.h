@@ -21,6 +21,7 @@ typedef struct {
   const char* title;
   bool has_border;
   void (*on_focus)(int);
+  void (*actions)(void*, int); // this should be used to implement intrinsic behavior into specific components within the lib
   WINDOW* dwin;
 } Container;
 
@@ -73,6 +74,31 @@ void app_end() {
   endwin();
 }
 
+// Handle all key inputs
+void app_key_handle(Application* app, int c) {
+  if (app == NULL) return;
+
+  // global actions
+  switch (c) {
+    case 'q':
+      app_end();
+      exit(0);
+
+    case '\t':
+      return;
+  }
+
+  // handle container default actions (a list handles arrow keys, for example)
+  if (app->focused_container != NULL && app->focused_container->actions != NULL) {
+    app->focused_container->actions(app, c);
+  }
+
+  // handle container focus
+  if (app->focused_container != NULL && app->focused_container->on_focus != NULL) {
+    app->focused_container->on_focus(c);
+  }
+}
+
 
 /**
  * Containers ------------------------------------------------------------------------
@@ -93,6 +119,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->start_y = start_y;
   temp->start_x = start_x;
   temp->on_focus = callback;
+  temp->actions = NULL;
   temp->title = title;
   temp->has_border = has_border;
 
@@ -205,6 +232,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   box(btn->base.dwin, 0, 0);
   container_print(&btn->base, 1, 1, " %s ", label);
   btn->base.on_focus = callback;
+  btn->base.actions = NULL;
   return btn;
 }
 
@@ -226,9 +254,27 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
 typedef struct {
   Container base;
   char** content;
+  int items;
   int selected;
 } List;
+
+// render the list component
+void list_render(List* list) {
+  container_update((Container*)list, stdscr);
+}
  
+// This executes when the list is focused, with the purpose of managing default actions of each list
+void _list_actions(void* app, int c) {
+  // if the list is focused, we know that it is exaclty the ACTIVE_CONTAINER
+  Application* _app = (Application*)app;
+  Container* _list = _app->focused_container;
+
+  // handle arrow keys
+  werase((WINDOW*)_list->dwin);
+  if (c == KEY_DOWN) container_print(_list, 1, 1, "down");
+  container_update(_list, stdscr);
+}
+
 // Creates a new list and returns its pointer
 List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int)) {
   List* temp = (List*)malloc(sizeof(List));
@@ -249,18 +295,12 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   // List properties
   temp->content = NULL;
   temp->selected = 0;
+  temp->items = 0;
+  temp->base.actions = _list_actions;
 
   return temp;
 }
 
-// render the list component
-void list_render(List* list) {
-  container_update((Container*)list, stdscr);
-}
-
-void list_on_focus(int c) {
-  //
-}
 
 // TODO: container_sprint() -> prints a Text<String>, you can set up the starting line to start from it to the end of the view!
 // NOTE: maybe this only make sense for text components.
