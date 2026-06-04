@@ -88,14 +88,14 @@ void app_key_handle(Application* app, int c) {
       return;
   }
 
-  // handle container default actions (a list handles arrow keys, for example)
-  if (app->focused_container != NULL && app->focused_container->actions != NULL) {
-    app->focused_container->actions(app, c);
-  }
-
   // handle container focus
   if (app->focused_container != NULL && app->focused_container->on_focus != NULL) {
     app->focused_container->on_focus(c);
+  }
+
+  // handle container default actions (a list handles arrow keys, for example)
+  if (app->focused_container != NULL && app->focused_container->actions != NULL) {
+    app->focused_container->actions(app, c);
   }
 }
 
@@ -270,8 +270,8 @@ void _list_actions(void* app, int c) {
   Container* _list = _app->focused_container;
 
   // handle arrow keys
-  werase((WINDOW*)_list->dwin);
-  if (c == KEY_DOWN) container_print(_list, 1, 1, "down");
+  //werase((WINDOW*)_list->dwin);
+  //if (c == KEY_DOWN) container_print(_list, 1, 1, "down");
   container_update(_list, stdscr);
 }
 
