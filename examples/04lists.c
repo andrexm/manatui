@@ -17,10 +17,13 @@ int main() {
   app->focused_container = (Container*)list;
 
   int c;
-  while (c = getch()) {
+  while ((c = getch())) {
     if (c == 'q') break;
     container_print((Container*)list, 1, 1, "content");
     container_update((Container*)list, stdscr);
+
+    // here magic happens!
+    app_key_handle(app, c);
   }
 
   app_end();
