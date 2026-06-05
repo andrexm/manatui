@@ -2,9 +2,17 @@
 #include <ncurses.h>
 
 void list_focus(int c, void* con) {
-  Container* my_list = con;
-  //container_print(my_list, TRUE, 1, 1, "content");
-  //container_update(my_list, stdscr);
+  List* list = (List*)con;
+
+  // handle 'j' key - go down
+  if (c == 'j' && list->selected < list->items - 1) {
+    list->selected++;
+  }
+
+  // handle 'k' key - go up
+  if (c == 'k' && list->selected > 0) {
+    list->selected--;
+  }
 }
 
 int main() {
