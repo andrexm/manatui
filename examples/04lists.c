@@ -1,7 +1,4 @@
 #include "../include/potatui.h"
-#include <ncurses.h>
-
-Application* app = NULL;
 
 void list_focus(int c, void* con) {
   Container* my_list = con;
@@ -11,10 +8,10 @@ void list_focus(int c, void* con) {
 
 int main() {
   //start application
-  app = potatui_init();
+  Application* app = potatui_init();
 
   List* list = list_create(stdscr, 8, 20, 2, 2, "Languages", TRUE, list_focus);
-  list->base.user_data = list;
+  list->base.user_data = list; // add the list itself to the list_focus context
   list_render(list);
 
   // set up list focus
