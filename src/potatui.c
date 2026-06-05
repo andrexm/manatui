@@ -248,22 +248,81 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
 
 // render the list component
 void list_render(List* list) {
+  if (list == NULL || list->base.dwin == NULL) return;
+
+  // hide the cursor
+  curs_set(1);
+
+  // clear the internal list buffer
+  werase(list->base.dwin);
+
+  // redraw the border and the title
   container_update((Container*)list, list->base.parent);
+
+  int visible_height = list->base.height - 2;
+
+  // render only visible items of the list
+  for (int i = 0; i < visible_height; i++) {
+    int real_index = list->scroll_top + i;
+
+    if (real_index >= list->items) break;
+
+    int screen_row = i + 1;
+
+    if (real_index == list->selected) {
+      // print selected item with inverted colors
+      wattron(list->base.dwin, A_REVERSE);
+      container_print((Container*)list, FALSE, screen_row, 1, "%-*s", list->base.width - 2, list->content[real_index]);
+      wattroff(list->base.dwin, A_REVERSE);
+    } else {
+      container_print((Container*) list, FALSE, screen_row, 1, "%s", list->content[real_index]);
+    }
+  }
+  // force updating the visual buffer
+  wnoutrefresh(list->base.dwin);
+  doupdate();
+
+  // show the cursor again
+  curs_set(1);
 }
  
 // This executes when the list is focused, with the purpose of managing default actions of each list
 void _list_actions(void* app, int c) {
   // if the list is focused, we know that it is exaclty the ACTIVE_CONTAINER
   Application* _app = (Application*)app;
-  Container* _list = _app->focused_container;
+  List* list = (List*)_app->focused_container;
+
+  if (list == NULL || list->items == 0) return;
+
+  int visible_height = list->base.height - 2;
 
   // handle arrow keys
-  if (c == KEY_DOWN) {
-    //
+  switch (c) {
+    case KEY_DOWN:
+      if (list->selected < list->items - 1) {
+        list->selected++;
+      }
+      // list_item_select(list, position);
+      break;
+
+    case KEY_UP:
+      if (list->selected > 0) {
+        list->selected--;
+      }
+      break;
   }
-  //werase((WINDOW*)_list->dwin);
-  //if (c == KEY_DOWN) container_print(_list, 1, 1, "down");
-  container_update(_list, _list->parent);
+
+  // update scroll_top if the selected item is over the list view
+  if (list->selected < list->scroll_top) {
+    list->scroll_top = list->selected;
+  }
+
+  // update scroll_top if the selected item is under the list view
+  if (list->selected >= list->scroll_top + visible_height) {
+    list->scroll_top = list->selected - visible_height + 1;
+  }
+  
+  list_render(list);
 }
 
 // Creates a new list and returns its pointer
@@ -289,10 +348,12 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->items = 0;
   temp->base.actions = _list_actions;
   temp->base.user_data = NULL;
+  temp->scroll_top = 0;
 
   return temp;
 }
 
+// Saves the recently added text line in the list->content string array
 void _list_content_add(List* list, const char* line) {
   if (list == NULL || line == NULL) return;
 
@@ -305,19 +366,31 @@ void _list_content_add(List* list, const char* line) {
 
 // add a new item to the list
 void list_item_add(List* list, const char* line, ...) {
-  if (list == NULL) return;
+  if (list == NULL || line == NULL) return;
 
+  // process the string on a temporary, clean, buffer
   va_list args;
   va_start(args, line);
 
-  int target_row = list->items + 1;
-  vcontainer_print((Container*)list, FALSE, target_row, 1, line, args);
+  va_list args_copy;
+  va_copy(args_copy, args);
+  int needed = vsnprintf(NULL, 0, line, args_copy);
+  va_end(args_copy);
+
+  if (needed < 0) { va_end(args); return; }
+
+  char* formatted_line = (char*)malloc(needed + 1);
+  if (formatted_line == NULL) { va_end(args); exit(1); }
+
+  vsnprintf(formatted_line, needed + 1, line, args);
   va_end(args);
 
   list->items += 1; // increase amount of lines - it also acts a way to know in which line of the list to print the next line
   list->selected = 0;// select item 0
+  _list_content_add(list, formatted_line); // register the line in the list->content
 
-  // register the line in the list->content
-  _list_content_add(list, line);
+  // force update
+  int target_row = list->items;
+  container_print((Container*)list, FALSE, target_row, 1, "%s", formatted_line);
 }
 
