@@ -126,8 +126,8 @@ void vcontainer_print(Container* con, bool break_line, int y, int x, const char*
   va_list args_copy;
   va_copy(args_copy, args);
   // when we give NULL and 0, the function return the necessary size for our buffer! (without considering the '\0')
-  int necessary_size = vsnprintf(NULL, 0, format, args);
-  va_end(args);
+  int necessary_size = vsnprintf(NULL, 0, format, args_copy);
+  va_end(args_copy);
 
   if (necessary_size < 0) return; // formatation error
 
@@ -258,6 +258,9 @@ void _list_actions(void* app, int c) {
   Container* _list = _app->focused_container;
 
   // handle arrow keys
+  if (c == KEY_DOWN) {
+    //
+  }
   //werase((WINDOW*)_list->dwin);
   //if (c == KEY_DOWN) container_print(_list, 1, 1, "down");
   container_update(_list, _list->parent);
@@ -290,6 +293,16 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   return temp;
 }
 
+void _list_content_add(List* list, const char* line) {
+  if (list == NULL || line == NULL) return;
+
+  char** new_content = (char**)realloc(list->content, list->items * sizeof(char*));
+  if (new_content == NULL) exit(1);
+
+  list->content = new_content;
+  list->content[list->items - 1] = (char*)line;
+}
+
 // add a new item to the list
 void list_item_add(List* list, const char* line, ...) {
   if (list == NULL) return;
@@ -303,5 +316,8 @@ void list_item_add(List* list, const char* line, ...) {
 
   list->items += 1; // increase amount of lines - it also acts a way to know in which line of the list to print the next line
   list->selected = 0;// select item 0
+
+  // register the line in the list->content
+  _list_content_add(list, line);
 }
 
