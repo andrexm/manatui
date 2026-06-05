@@ -1,4 +1,4 @@
-#include "../include/ctui.h"
+#include "../include/potatui.h"
 #include <ncurses.h>
 
 const int START_Y = 3;
