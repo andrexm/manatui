@@ -1,6 +1,5 @@
-#include "../src/ctui.h"
+#include "../include/ctui.h"
 #include <ncurses.h>
-#include <stdio.h>
 
 const int START_Y = 3;
 const int START_X = 40;
