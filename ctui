@@ -5,7 +5,7 @@ import os
 
 def run_example(filename):
 	exename = f"{filename}-out"
-	os.system(f"gcc -o {exename} examples/{filename}.c -lncurses")
+	os.system(f"gcc -o {exename} examples/{filename}.c src/ctui.c -lncurses")
 	os.system(f"./{exename}")
 	os.system(f"rm ./{exename}")
 
