@@ -34,7 +34,7 @@ int main() {
 
   // we can read the list content whenever we want
   for (int i = 0; i < list->items; i++) {
-    mvprintw(i + 1, 60, list->content[i]);
+    mvprintw(i + 1, 60, "%s", list->content[i]);
   }
 
   // set up list focus
