@@ -10,7 +10,7 @@ Button* btn;
 Button* btn2;
 
 // this function check each input when the button is focused (the name 'onclick' is because we only handle the enter key)
-void btn_onclick(int c) {
+void btn_onclick(int c, void* user_data) {
   if (c == 10) container_print(app->focused_container, 1, 1, " Clicked!!!");
   container_update(app->focused_container, stdscr);
 }
@@ -65,7 +65,7 @@ int main() {
     // executes the on_focus method of the active container
     if (app->focused_container != NULL) {
 
-      app->focused_container->on_focus(c);
+      app->focused_container->on_focus(c, NULL);
       continue;
     }
 
