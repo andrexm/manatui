@@ -53,12 +53,12 @@ typedef struct {
 /**
  * Application ---------------------------------------------------------------
 */
-Application* app_init();
+Application* potatui_init();
 void app_add_container(Application* app, Container* con);
 void app_focus_on(Application* app, Container* con);
-void app_end();
 void app_key_handle(Application* app, int c);
-void app_loop(Application* app);
+void potatui_loop(Application* app);
+void potatui_end();
 
 /**
  * Containers ----------------------------------------------------------------

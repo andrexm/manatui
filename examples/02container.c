@@ -3,7 +3,7 @@
 
 int main() {
   // Start the application
-  Application* app = app_init();
+  Application* app = potatui_init();
 
   // Create a container inside app
   Container* con = container_create(stdscr, 20, 20, 0, 1, NULL, TRUE, NULL);
@@ -13,6 +13,6 @@ int main() {
   container_update(con, stdscr);
   getch();
   
-  app_end();
+  potatui_end();
   return 0;
 }

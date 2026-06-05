@@ -27,7 +27,7 @@ void tab_buttons() {
 
 int main() {
   // Start the application
-  app = app_init();
+  app = potatui_init();
 
   // Create a button inside app and initialize it
   btn = button_create(stdscr, 3, 12, START_Y, START_X, "click me", btn_onclick);
@@ -71,6 +71,6 @@ int main() {
   }
 
   finish:
-  app_end();
+  potatui_end();
   return 0;
 }

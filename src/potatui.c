@@ -10,8 +10,8 @@
  * Starting and Ending ---------------------------------------------------------------
  */
 
-// Start ncurses
-Application* app_init() {
+// Start app
+Application* potatui_init() {
   initscr();
   noecho();
   raw();
@@ -42,7 +42,7 @@ void app_focus_on(Application* app, Container* con) {
 }
 
 // End ncurses
-void app_end() {
+void potatui_end() {
   endwin();
 }
 
@@ -53,7 +53,7 @@ void app_key_handle(Application* app, int c) {
   // global actions
   switch (c) {
     case 'q':
-      app_end();
+      potatui_end();
       exit(0);
 
     case '\t':
@@ -72,7 +72,7 @@ void app_key_handle(Application* app, int c) {
 }
 
 // Application loop
-void app_loop(Application* app) {
+void potatui_loop(Application* app) {
   if (app == NULL) return;
 
   // make sure to initialize the focused container when the loop starts

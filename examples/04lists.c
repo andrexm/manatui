@@ -11,7 +11,7 @@ void list_focus(int c, void* con) {
 
 int main() {
   //start application
-  app = app_init();
+  app = potatui_init();
 
   List* list = list_create(stdscr, 8, 20, 2, 2, "Languages", TRUE, list_focus);
   list->base.user_data = list;
@@ -21,8 +21,8 @@ int main() {
   app_add_container(app, (Container*)list);
   app->focused_container = (Container*)list;
 
-  app_loop(app);
+  potatui_loop(app);
 
-  app_end();
+  potatui_end();
   return 0;
 }
