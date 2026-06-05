@@ -1,4 +1,4 @@
-#include "../src/ctui.h"
+#include "../include/ctui.h"
 #include <ncurses.h>
 
 Application* app = NULL;
