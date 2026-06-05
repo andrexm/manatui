@@ -46,7 +46,7 @@ typedef struct {
 typedef struct {
   Container base;
   char** content;
-  int items;
+  int items; // the amount of items
   int selected;
 } List;
 
@@ -66,7 +66,8 @@ void potatui_end();
 */
 void container_init(Container* con, WINDOW* parent);
 Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
-void container_print(Container* con, int y, int x, const char* format, ...);
+void vcontainer_print(Container* con, bool break_line, int y, int x, const char* format, va_list args);
+void container_print(Container* con, bool break_line, int y, int x, const char* format, ...);
 void container_update(Container* con, WINDOW* parent);
 
 /**
@@ -81,4 +82,5 @@ void button_select(Application* app, WINDOW* parent, Container* btn);
 void list_render(List* list); 
 void _list_actions(void* app, int c);
 List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
+void list_item_add(List* list, const char* line, ...);
 
