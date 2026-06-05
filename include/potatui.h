@@ -81,6 +81,3 @@ void list_render(List* list);
 void _list_actions(void* app, int c);
 List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
 
-// TODO: container_sprint() -> prints a Text<String>, you can set up the starting line to start from it to the end of the view!
-// NOTE: maybe this only make sense for text components.
-
