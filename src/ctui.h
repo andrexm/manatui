@@ -20,8 +20,9 @@ typedef struct {
 
   const char* title;
   bool has_border;
-  void (*on_focus)(int);
+  void (*on_focus)(int, void*);
   void (*actions)(void*, int); // this should be used to implement intrinsic behavior into specific components within the lib
+  void* user_data; // this can be anything the user needs to manipulate inside the (*on_focus)(int, void*)
   WINDOW* dwin;
 } Container;
 
@@ -90,12 +91,27 @@ void app_key_handle(Application* app, int c) {
 
   // handle container focus
   if (app->focused_container != NULL && app->focused_container->on_focus != NULL) {
-    app->focused_container->on_focus(c);
+    app->focused_container->on_focus(c, app->focused_container->user_data);
   }
 
   // handle container default actions (a list handles arrow keys, for example)
   if (app->focused_container != NULL && app->focused_container->actions != NULL) {
     app->focused_container->actions(app, c);
+  }
+}
+
+// Application loop
+void app_loop(Application* app) {
+  if (app == NULL) return;
+
+  // make sure to initialize the focused container when the loop starts
+  if (app->focused_container != NULL) {
+    container_update(app->focused_container, stdscr);
+  }
+
+  int c;
+  while ((c = getch())) {
+    app_key_handle(app, c);
   }
 }
 
@@ -110,7 +126,7 @@ void container_init(Container* con, WINDOW* parent) {
 }
 
 // Working with base containers
-Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int)) {
+Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*)) {
   Container* temp = (Container*)malloc(sizeof(Container));
   if (temp == NULL) exit(1);
 
@@ -217,7 +233,7 @@ typedef struct {
 } Button;
 
 // Creates a new button instance
-Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int)) {
+Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
   Button* btn = (Button*)malloc(sizeof(Button));
   if (btn == NULL) exit(1);
 
@@ -276,7 +292,7 @@ void _list_actions(void* app, int c) {
 }
 
 // Creates a new list and returns its pointer
-List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int)) {
+List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*)) {
   List* temp = (List*)malloc(sizeof(List));
   if (temp == NULL) exit(1);
 
