@@ -251,31 +251,31 @@ void list_render(List* list) {
   if (list == NULL || list->base.dwin == NULL) return;
 
   // hide the cursor
-  curs_set(1);
-
-  // clear the internal list buffer
-  werase(list->base.dwin);
+  curs_set(0);
 
   // redraw the border and the title
   container_update((Container*)list, list->base.parent);
 
   int visible_height = list->base.height - 2;
+  int usable_width = list->base.width - 2;
 
-  // render only visible items of the list
+  // draw only visible items of the list
   for (int i = 0; i < visible_height; i++) {
     int real_index = list->scroll_top + i;
-
-    if (real_index >= list->items) break;
-
     int screen_row = i + 1;
 
-    if (real_index == list->selected) {
-      // print selected item with inverted colors
-      wattron(list->base.dwin, A_REVERSE);
-      container_print((Container*)list, FALSE, screen_row, 1, "%-*s", list->base.width - 2, list->content[real_index]);
-      wattroff(list->base.dwin, A_REVERSE);
-    } else {
-      container_print((Container*) list, FALSE, screen_row, 1, "%s", list->content[real_index]);
+    if (real_index < list->items) {
+      if (real_index == list->selected) {
+        // print selected item with inverted colors
+        wattron(list->base.dwin, A_REVERSE);
+        container_print((Container*)list, FALSE, screen_row, 1, "%-*s", usable_width, list->content[real_index]);
+        wattroff(list->base.dwin, A_REVERSE);
+      } else {
+        container_print((Container*) list, FALSE, screen_row, 1, "%-*s", usable_width, list->content[real_index]);
+      }
+    } else { // there is no item for this visible line
+      // remove trash from the screen
+      container_print((Container*)list, FALSE, screen_row, 1, "%-*s", usable_width, "");
     }
   }
 
