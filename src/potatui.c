@@ -118,13 +118,13 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   return temp;
 }
 
-void container_print(Container* con, int y, int x, const char* format, ...) {
+// print text on the container using va_list
+void vcontainer_print(Container* con, bool break_line, int y, int x, const char* format, va_list args) {
   if (!con || !con->dwin) return;
 
-  va_list args;
-
   // 1. Finding the size for the buffer
-  va_start(args, format);
+  va_list args_copy;
+  va_copy(args_copy, args);
   // when we give NULL and 0, the function return the necessary size for our buffer! (without considering the '\0')
   int necessary_size = vsnprintf(NULL, 0, format, args);
   va_end(args);
@@ -136,9 +136,8 @@ void container_print(Container* con, int y, int x, const char* format, ...) {
   if (buffer == NULL) return; // system memory error
 
   // 3. Finally, truly formating the text
-  va_start(args, format);
-  vsnprintf(buffer, necessary_size + 1, format, args);
-  va_end(args);
+  int size = break_line ? (necessary_size + 1) : (con->width - 1); // this prevents the text from breaking line if we don't want it to break
+  vsnprintf(buffer, size, format, args);
 
   // 4. Calculate the container internal limits
   int max_y = con->height - 1;
@@ -177,6 +176,14 @@ void container_print(Container* con, int y, int x, const char* format, ...) {
   free(buffer);
 }
 
+// print text on the container
+void container_print(Container *con, bool break_line, int y, int x, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vcontainer_print(con, break_line, y, x, format, args);
+  va_end(args);
+}
+
 // update the container after some change
 void container_update(Container* con, WINDOW* parent) {
   if (!con || !con->dwin) return;
@@ -187,7 +194,8 @@ void container_update(Container* con, WINDOW* parent) {
 
     // print title if it has one
     if (con->title != NULL && con->title[0] != '\0') {
-      container_print(con, 0, 2, "< %s >", con->title);
+      wmove(con->dwin, 0, 2);
+      wprintw(con->dwin, "< %s >", con->title);
     }
   }
 
@@ -216,7 +224,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.dwin = derwin(parent, height, width, start_y, start_x);
 
   box(btn->base.dwin, 0, 0);
-  container_print(&btn->base, 1, 1, " %s ", label);
+  container_print(&btn->base, FALSE, 1, 1, " %s ", label);
   btn->base.on_focus = callback;
   btn->base.actions = NULL;
   btn->base.user_data = NULL;
@@ -280,5 +288,20 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->base.user_data = NULL;
 
   return temp;
+}
+
+// add a new item to the list
+void list_item_add(List* list, const char* line, ...) {
+  if (list == NULL) return;
+
+  va_list args;
+  va_start(args, line);
+
+  int target_row = list->items + 1;
+  vcontainer_print((Container*)list, FALSE, target_row, 1, line, args);
+  va_end(args);
+
+  list->items += 1; // increase amount of lines - it also acts a way to know in which line of the list to print the next line
+  list->selected = 0;// select item 0
 }
 
