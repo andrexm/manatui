@@ -1,39 +1,10 @@
-#pragma once
-
-#include "ncurses.h"
+#include <ncurses.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
-#define MAX_CONTAINERS 50
-
-// Container - the base for all other components
-typedef struct {
-  // dimensions of the Derwin
-  int height;
-  int width;
-
-  // the start of the visible area at the screen (physical coordinates)
-  int start_x;
-  int start_y;
-
-  const char* title;
-  bool has_border;
-  void (*on_focus)(int, void*);
-  void (*actions)(void*, int); // this should be used to implement intrinsic behavior into specific components within the lib
-  void* user_data; // this can be anything the user needs to manipulate inside the (*on_focus)(int, void*)
-  WINDOW* dwin;
-} Container;
-
-// Application - where everything happens
-typedef struct {
-  int height;
-  int width;
-  Container* container_list[MAX_CONTAINERS]; // a list for focusable containers
-  Container* focused_container;
-  int total_containers; // the amount of focused containers
-} Application;
+#include "../include/ctui.h"
 
 /**
  * Starting and Ending ---------------------------------------------------------------
@@ -227,10 +198,6 @@ void container_update(Container* con, WINDOW* parent) {
 /**
  * Buttons -----------------------------------------------------------------------------------------------------------
  */
-typedef struct {
-  Container base;
-  char label[50];
-} Button;
 
 // Creates a new button instance
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
@@ -266,13 +233,6 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
 /**
  * Lists ------------------------------------------------------------------------------------------------------------
  */
-
-typedef struct {
-  Container base;
-  char** content;
-  int items;
-  int selected;
-} List;
 
 // render the list component
 void list_render(List* list) {
@@ -316,8 +276,4 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
 
   return temp;
 }
-
-
-// TODO: container_sprint() -> prints a Text<String>, you can set up the starting line to start from it to the end of the view!
-// NOTE: maybe this only make sense for text components.
 
