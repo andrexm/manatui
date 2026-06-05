@@ -109,6 +109,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->actions = NULL;
   temp->title = title;
   temp->has_border = has_border;
+  temp->user_data = NULL;
 
   // Initialize before printing any content inside it
   container_init(temp, stdscr);
@@ -216,6 +217,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   container_print(&btn->base, 1, 1, " %s ", label);
   btn->base.on_focus = callback;
   btn->base.actions = NULL;
+  btn->base.user_data = NULL;
   return btn;
 }
 
@@ -273,6 +275,7 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->selected = 0;
   temp->items = 0;
   temp->base.actions = _list_actions;
+  temp->base.user_data = NULL;
 
   return temp;
 }
