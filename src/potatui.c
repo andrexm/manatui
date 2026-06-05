@@ -77,7 +77,7 @@ void potatui_loop(Application* app) {
 
   // make sure to initialize the focused container when the loop starts
   if (app->focused_container != NULL) {
-    container_update(app->focused_container, stdscr);
+    container_update(app->focused_container, app->focused_container->parent);
   }
 
   int c;
@@ -93,13 +93,15 @@ void potatui_loop(Application* app) {
 
 // initialize a container inside a parent
 void container_init(Container* con, WINDOW* parent) {
+  if (con == NULL || parent == NULL) exit(1);
+  con->parent = parent;
   con->dwin = derwin(parent, con->height, con->width, con->start_y, con->start_x);
 }
 
 // Working with base containers
 Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*)) {
   Container* temp = (Container*)malloc(sizeof(Container));
-  if (temp == NULL) exit(1);
+  if (temp == NULL || parent == NULL) exit(1);
 
   temp->height = height;
   temp->width = width;
@@ -112,7 +114,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->user_data = NULL;
 
   // Initialize before printing any content inside it
-  container_init(temp, stdscr);
+  container_init(temp, parent);
   return temp;
 }
 
@@ -238,7 +240,7 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
 
 // render the list component
 void list_render(List* list) {
-  container_update((Container*)list, stdscr);
+  container_update((Container*)list, list->base.parent);
 }
  
 // This executes when the list is focused, with the purpose of managing default actions of each list
@@ -250,13 +252,13 @@ void _list_actions(void* app, int c) {
   // handle arrow keys
   //werase((WINDOW*)_list->dwin);
   //if (c == KEY_DOWN) container_print(_list, 1, 1, "down");
-  container_update(_list, stdscr);
+  container_update(_list, _list->parent);
 }
 
 // Creates a new list and returns its pointer
 List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*)) {
   List* temp = (List*)malloc(sizeof(List));
-  if (temp == NULL) exit(1);
+  if (temp == NULL || parent == NULL) exit(1);
 
   // init Container members
   temp->base.height = height;
