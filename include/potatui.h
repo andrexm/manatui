@@ -23,6 +23,7 @@ typedef struct {
   void (*on_focus)(int, void*);
   void (*actions)(void*, int); // this should be used to implement intrinsic behavior into specific components within the lib
   void* user_data; // this can be anything the user needs to manipulate inside the (*on_focus)(int, void*)
+  WINDOW* parent;
   WINDOW* dwin;
 } Container;
 
