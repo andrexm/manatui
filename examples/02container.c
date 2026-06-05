@@ -1,11 +1,9 @@
-#include "../src/ctui.h"
+#include "../include/ctui.h"
 #include <ncurses.h>
-#include <stdio.h>
 
 int main() {
   // Start the application
-  Application* app;
-  app_init();
+  Application* app = app_init();
 
   // Create a container inside app
   Container* con = container_create(stdscr, 20, 20, 0, 1, NULL, TRUE, NULL);
