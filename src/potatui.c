@@ -278,6 +278,11 @@ void list_render(List* list) {
       container_print((Container*) list, FALSE, screen_row, 1, "%s", list->content[real_index]);
     }
   }
+
+  // now positining the cursor over the selected item
+  int visual_selected_row = (list->selected - list->scroll_top) + 1;
+  wmove(list->base.dwin, visual_selected_row, 1);
+  
   // force updating the visual buffer
   wnoutrefresh(list->base.dwin);
   doupdate();
