@@ -194,8 +194,12 @@ void container_print(Container *con, bool break_line, int y, int x, const char *
 }
 
 // update the container after some change
-void container_update(Container* con) {
-  if (!con || !con->dwin) return;
+// obj is a component based on Container
+void container_update(void* obj) {
+  if (!obj) return;
+
+  Container* con = (Container*)obj;
+  if (!con->dwin) return;
 
   // first draw the borders if they exist
   if (con->has_border) {
@@ -239,7 +243,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.user_data = NULL;
 
   container_init(&btn->base, parent);
-  container_update(&btn->base);
+  container_update(btn);
   wnoutrefresh(btn->base.dwin);
   doupdate();
   
@@ -269,7 +273,7 @@ void list_render(List* list) {
   curs_set(0);
 
   // redraw the border and the title
-  container_update((Container*)list);
+  container_update(list);
 
   int visible_height = list->base.height - 2;
   int usable_width = list->base.width - 2;
@@ -478,7 +482,7 @@ void _textinput_default_actions(void* context, int c) {
   }
 
   // update boders and title
-  container_update((Container*)input);
+  container_update(input);
 
   // calculate which portion of the text to show and where to position the cursor
   int usable_width = input->base.width - 2;
@@ -536,7 +540,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->base.title = label;
 
   container_init(&input->base, parent);
-  container_update((Container*)input);
+  container_update(input);
   wnoutrefresh(input->base.dwin);
   doupdate();
 
