@@ -102,6 +102,5 @@ void list_item_select(List* list, const int position);
 */
 // on creating, renamed title to label, height = 3, and has_border is always true
 TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
-//void textinput_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
 void textinput_actions(void* app, int c);
 
