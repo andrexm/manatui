@@ -68,7 +68,7 @@ void app_key_handle(Application* app, int c) {
 
   // handle container default actions (a list handles arrow keys, for example)
   if (app->focused_container != NULL && app->focused_container->actions != NULL) {
-    app->focused_container->actions(app, c);
+    app->focused_container->actions(app->focused_container, c);
   }
 }
 
@@ -102,6 +102,9 @@ void container_init(Container* con, WINDOW* parent) {
   if (con == NULL || parent == NULL) exit(1);
   con->parent = parent;
   con->dwin = derwin(parent, con->height, con->width, con->start_y, con->start_x);
+
+  // so we have to activate keypad for every window
+  keypad(con->dwin, TRUE);
 }
 
 // Working with base containers
@@ -298,10 +301,11 @@ void list_render(List* list) {
 }
  
 // This executes when the list is focused, with the purpose of managing default actions of each list
-void _list_actions(void* app, int c) {
+void _list_actions(void* context, int c) {
+  if (context == NULL) return;
+
   // if the list is focused, we know that it is exaclty the ACTIVE_CONTAINER
-  Application* _app = (Application*)app;
-  List* list = (List*)_app->focused_container;
+  List* list = (List*)context;
 
   if (list == NULL || list->items == 0) return;
 
@@ -405,3 +409,106 @@ void list_item_add(List* list, const char* line, ...) {
   container_print((Container*)list, FALSE, target_row, 1, "%s", formatted_line);
 }
 
+
+/**
+ * TextInput -----------------------------------------------------------------
+*/
+
+// add a char at the given position
+void _textinput_add_char(TextInput* input, int position, int c) {
+  if (input == NULL) return;
+  if (position > input->content_size || position >= sizeof(input->content) - 1 || position < 0) return;
+
+  for (int i = input->content_size; i > position; i--) {
+    input->content[i] = input->content[i - 1];
+  }
+
+  input->content[position] = (char)c;
+  input->content_size++;
+  input->content[input->content_size] = '\0';
+}
+
+// remove a char from the given position
+void _textinput_remove_char(TextInput* input, int position) {
+  if (input == NULL) return;
+  if (position < 0 || position > input->content_size) return;
+
+  for (int i = position; i < input->content_size - 1; i++) {
+    input->content[i] = input->content[i + 1];
+  }
+
+  input->content_size--;
+  input->content[input->content_size] = '\0';
+}
+
+// the default behavior of the text input
+void _textinput_default_actions(void* context, int c) {
+  if (context == NULL) return;
+
+  TextInput* input = (TextInput*)context;
+
+  curs_set(0);
+
+  // navigating through the text
+  if (c == KEY_LEFT) {
+    if (input->cursor_pos > 0) input->cursor_pos--;
+  }
+  else if (c == KEY_RIGHT) {
+    if (input->cursor_pos < input->content_size) input->cursor_pos++;
+  }
+
+  // removing characters
+  else if (c == KEY_BACKSPACE || c == 127 || c == 8) {
+    if (input->cursor_pos > 0) {      
+      _textinput_remove_char(input, input->cursor_pos - 1);
+      input->cursor_pos--; // the cursor walks 1 character to the left after removing a char
+    }
+  }
+  
+  // filter usable characters
+  else if (c >= 32 && c <= 126) {
+    _textinput_add_char(input, input->cursor_pos, c);
+    input->cursor_pos++; // the cursor advances after typing
+  }
+
+  // update boders and title
+  container_update((Container*)input, input->base.parent);
+
+  int usable_width = input->base.width - 2;
+  container_print((Container*)input, FALSE, 1, 1, "%-*s", usable_width, input->content);
+
+  wmove(input->base.dwin, 1, 1 + input->cursor_pos);
+
+  wnoutrefresh(input->base.dwin);
+  doupdate();
+
+  curs_set(1);
+}
+
+// create a new TextInput
+TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
+  if (parent == NULL) return NULL;
+  
+  TextInput* input = (TextInput*)malloc(sizeof(TextInput));
+  if (input == NULL) exit(1);
+
+  input->content[0] = '\0';
+  input->content_size = 0;
+  input->cursor_pos = 0;
+
+  // base container properties
+  input->base.actions = _textinput_default_actions;
+  input->base.has_border = TRUE;
+  input->base.height = 3; // top and bottom borders plus content in one line
+  input->base.on_focus = callback;
+  input->base.parent = parent;
+  input->base.start_x = start_x;
+  input->base.start_y = start_y;
+  input->base.width = width;
+  input->base.user_data = NULL;
+  input->base.title = label;
+
+  container_init(&input->base, parent);
+
+  return input;
+}
