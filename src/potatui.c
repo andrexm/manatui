@@ -125,6 +125,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->title = title;
   temp->has_border = has_border;
   temp->user_data = NULL;
+  temp->parent = parent;
 
   // Initialize before printing any content inside it
   container_init(temp);
