@@ -35,7 +35,7 @@ void btn_on_focus(int c, void* user_data) {
     }
     container_print(app->focused_container, FALSE, 1, 2, "%d clicks  ", clicks); // update label with container_print
     wmove(app->focused_container->dwin, 1, 1); // move the mouse before updating
-    container_update(app->focused_container, app->focused_container->parent); // update the focused button
+    container_update(app->focused_container); // update the focused button
   }
 }
 
