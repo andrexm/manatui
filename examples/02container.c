@@ -30,7 +30,8 @@ int main() {
                   "Hello, welcome to Potatui. It was written completely in %c and %s!", // we can pass a formatted string, like with printf
                   'C', "ncurses" // then you pass as many parameters as you need in your string
                 );
-  container_update(con); // this is a necessary step to draw the container correctly - you don't have to call it explicitly when using other components
+  container_update(con);
+
   getch(); // wait for a keypress
   
   potatui_end(); // finish the app
