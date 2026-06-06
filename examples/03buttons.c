@@ -4,73 +4,68 @@
 const int START_Y = 3;
 const int START_X = 40;
 
+// defining these items here simplify the example
 Application* app;
 Button* btn;
 Button* btn2;
 
-// this function check each input when the button is focused (the name 'onclick' is because we only handle the enter key)
-void btn_onclick(int c, void* user_data) {
-  if (c == 10) container_print(app->focused_container, 1, 1, " Clicked!!!");
-  container_update(app->focused_container, stdscr);
-}
+int clicks_btn1 = 0; // clicks on btn
+int clicks_btn2 = 0; // clicks on btn2
 
-// move the cursor between each button after pressing TAB
-void tab_buttons() {
-  int y, x;
-  getyx(stdscr, y, x);
-  if (x == START_X || x == START_X + 1) {
-    wmove(btn->base.dwin, START_Y + 1, START_X + 14 + 1);
-  } else {
-    wmove(btn2->base.dwin, START_Y + 1, START_X + 1);
+// this function executes whenever the owner component (Button) has focus
+// in this program, both buttons use this function
+// you should create all your actions related to that component inside this function, and name it how you prefer
+void btn_on_focus(int c, void* user_data) {
+  if (c == '\t') { // when you press TAB
+    Container* local_btn = // the other button (not focused)
+                          app->focused_container == (Container*)btn // is btn the focused Button?
+                          ? (Container*)btn2 // TRUE, then the TAB should move focus to btn2
+                          : (Container*)btn; // FALSE, the btn2 is active and TAB move focus to btn
+    button_select(app, app->focused_container->parent, local_btn); // then you focus on that other button
+  }
+
+  if (c == 10) { // when you press ENTER
+    int clicks = 0;
+    if (app->focused_container == (Container*)btn) {
+      clicks_btn1++; // increase how many times btn was clicked
+      clicks = clicks_btn1;
+    } else {
+      clicks_btn2++; // increase how many times btn2 was clicked
+      clicks = clicks_btn2;
+    }
+    container_print(app->focused_container, FALSE, 1, 2, "%d clicks  ", clicks); // update label with container_print
+    wmove(app->focused_container->dwin, 1, 1); // move the mouse before updating
+    container_update(app->focused_container, app->focused_container->parent); // update the focused button
   }
 }
+
+// ------------------------
 
 int main() {
   // Start the application
   app = potatui_init();
 
   // Create a button inside app and initialize it
-  btn = button_create(stdscr, 3, 12, START_Y, START_X, "click me", btn_onclick);
+  btn = button_create(stdscr, 3, 12, START_Y, START_X, "0 clicks", btn_on_focus);
   container_update((Container*)btn, stdscr);
 
   // Create another button
-  btn2 = button_create(stdscr, 3, 14, START_Y, START_X + 14, "click me 2", btn_onclick);
+  btn2 = button_create(stdscr, 3, 12, START_Y, START_X + 14, "0 clicks", btn_on_focus);
   container_update((Container*)btn2, stdscr);
 
   // Add both buttons to the focusable list
   app_add_container(app, (Container*)btn);
   app_add_container(app, (Container*)btn2);
 
-  int c;
-  while (c = getch()) {
-    // handle keys
-    switch (c) {
-      case 'q':
-        goto finish;
-        break;
+  // You have to focus on something in order to interact with the program.
+  // In this case, buttons have the 'button_select' function
+  button_select(app, btn->base.parent, (Container*)btn); 
+  //app->focused_container = (Container*)btn; // you could do this instead
 
-      case '\t':
-        if (app->focused_container == (Container*)btn) {
-          button_select(app, stdscr, (Container*)btn2);
-        } else {
-          button_select(app, stdscr, (Container*)btn);
-        }
-        continue;
-        break;
+  // Application loop
+  potatui_loop(app);
 
-      default:
-        break;
-    }
-    // executes the on_focus method of the active container
-    if (app->focused_container != NULL) {
-
-      app->focused_container->on_focus(c, NULL);
-      continue;
-    }
-
-  }
-
-  finish:
+  // Finish the program
   potatui_end();
   return 0;
 }
