@@ -78,7 +78,7 @@ void potatui_loop(Application* app) {
 
   // make sure to initialize the focused container when the loop starts
   if (app->focused_container != NULL) {
-    container_update(app->focused_container, app->focused_container->parent);
+    container_update(app->focused_container);
   }
 
   int c;
@@ -194,7 +194,7 @@ void container_print(Container *con, bool break_line, int y, int x, const char *
 }
 
 // update the container after some change
-void container_update(Container* con, WINDOW* parent) {
+void container_update(Container* con) {
   if (!con || !con->dwin) return;
 
   // first draw the borders if they exist
@@ -209,7 +209,7 @@ void container_update(Container* con, WINDOW* parent) {
   }
 
   // the update
-  wnoutrefresh(parent);
+  wnoutrefresh(con->parent);
   wnoutrefresh(con->dwin);
   doupdate();
 }
@@ -239,7 +239,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.user_data = NULL;
 
   container_init(&btn->base, parent);
-  container_update(&btn->base, parent);
+  container_update(&btn->base);
   wnoutrefresh(btn->base.dwin);
   doupdate();
   
@@ -252,7 +252,7 @@ void button_select(Application* app, WINDOW* parent, Container* btn) {
 
   box(btn->dwin, 0, 0);
   wmove(btn->dwin, 1, 1);
-  container_update(btn, parent);
+  container_update(btn);
   app_focus_on(app, btn);
 }
 
@@ -269,7 +269,7 @@ void list_render(List* list) {
   curs_set(0);
 
   // redraw the border and the title
-  container_update((Container*)list, list->base.parent);
+  container_update((Container*)list);
 
   int visible_height = list->base.height - 2;
   int usable_width = list->base.width - 2;
@@ -478,7 +478,7 @@ void _textinput_default_actions(void* context, int c) {
   }
 
   // update boders and title
-  container_update((Container*)input, input->base.parent);
+  container_update((Container*)input);
 
   // calculate which portion of the text to show and where to position the cursor
   int usable_width = input->base.width - 2;
@@ -535,7 +535,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->base.title = label;
 
   container_init(&input->base, parent);
-  container_update((Container*)input, parent);
+  container_update((Container*)input);
   wnoutrefresh(input->base.dwin);
   doupdate();
 
