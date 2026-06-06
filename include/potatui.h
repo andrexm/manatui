@@ -58,6 +58,7 @@ typedef struct {
   int content_size;
   int cursor_pos; // cursor position inside the text
   int text_pos; // start printing the text after this position
+  bool disabled;
 } TextInput;
 
 
@@ -103,4 +104,5 @@ void list_item_select(List* list, const int position);
 // on creating, renamed title to label, height = 3, and has_border is always true
 TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
 void textinput_actions(void* app, int c);
+void textinput_render(TextInput* input);
 
