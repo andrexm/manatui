@@ -50,14 +50,15 @@ void potatui_end() {
 void app_key_handle(Application* app, int c) {
   if (app == NULL) return;
 
+  if (c == ctrl('q')) {
+    potatui_end();
+    exit(0);
+  }
+
   // global actions
   switch (c) {
-    case 'q':
-      potatui_end();
-      exit(0);
-
     case '\t':
-      return;
+      break;
   }
 
   // handle container focus
@@ -84,6 +85,11 @@ void potatui_loop(Application* app) {
   while ((c = getch())) {
     app_key_handle(app, c);
   }
+}
+
+// CTRL + key - doing this as a function helps on portability to other languages
+int ctrl(int c) {
+  return ((c) & (0x1f));
 }
 
 
