@@ -465,14 +465,14 @@ void _textinput_default_actions(void* context, int c) {
 
   // removing characters
   else if (c == KEY_BACKSPACE || c == 127 || c == 8) {
-    if (input->cursor_pos > 0) {      
+    if (input->cursor_pos > 0 && input->disabled == FALSE) {      
       _textinput_remove_char(input, input->cursor_pos - 1);
       input->cursor_pos--; // the cursor walks 1 character to the left after removing a char
     }
   }
   
   // filter usable characters
-  else if (c >= 32 && c <= 126) {
+  else if (c >= 32 && c <= 126 && input->disabled == FALSE) {
     _textinput_add_char(input, input->cursor_pos, c);
     input->cursor_pos++; // the cursor advances after typing
   }
@@ -521,6 +521,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->content_size = 0;
   input->cursor_pos = 0;
   input->text_pos = 0;
+  input->disabled = FALSE;
 
   // base container properties
   input->base.actions = _textinput_default_actions;
@@ -540,4 +541,10 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   doupdate();
 
   return input;
+}
+
+// Force re-drawing the input when needed.
+// For example, when you create a disabled input and then add text to it - you should re-render the input.
+void textinput_render(TextInput* input) {
+  _textinput_default_actions(input, 0);
 }
