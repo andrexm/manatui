@@ -45,13 +45,9 @@ int main() {
   // Start the application
   app = potatui_init();
 
-  // Create a button inside app and initialize it
+  // Create the buttons inside app and initialize
   btn = button_create(stdscr, 3, 12, START_Y, START_X, "0 clicks", btn_on_focus);
-  container_update((Container*)btn, stdscr);
-
-  // Create another button
   btn2 = button_create(stdscr, 3, 12, START_Y, START_X + 14, "0 clicks", btn_on_focus);
-  container_update((Container*)btn2, stdscr);
 
   // Add both buttons to the focusable list
   app_add_container(app, (Container*)btn);
