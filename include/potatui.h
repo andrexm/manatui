@@ -20,6 +20,7 @@ typedef struct {
 
   const char* title;
   bool has_border;
+  bool is_focused;
   void (*on_focus)(int, void*);
   void (*actions)(void*, int); // this should be used to implement intrinsic behavior into specific components within the lib
   void* user_data; // this can be anything the user needs to manipulate inside the (*on_focus)(int, void*)
@@ -86,7 +87,7 @@ void container_update(void* obj);
  * Buttons -------------------------------------------------------------------
 */
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
-void button_select(Application* app, WINDOW* parent, Container* btn);
+void button_select(Application* app, Container* btn);
 
 /**
  * Lists ---------------------------------------------------------------------

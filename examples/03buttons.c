@@ -21,7 +21,7 @@ void btn_on_focus(int c, void* user_data) {
                           app->focused_container == (Container*)btn // is btn the focused Button?
                           ? (Container*)btn2 // TRUE, then the TAB should move focus to btn2
                           : (Container*)btn; // FALSE, the btn2 is active and TAB move focus to btn
-    button_select(app, app->focused_container->parent, local_btn); // then you focus on that other button
+    button_select(app, local_btn); // then you focus on that other button
   }
 
   if (c == 10) { // when you press ENTER
@@ -46,8 +46,8 @@ int main() {
   app = potatui_init();
 
   // Create the buttons inside app and initialize
-  btn = button_create(stdscr, 3, 12, START_Y, START_X, "0 clicks", btn_on_focus);
-  btn2 = button_create(stdscr, 3, 12, START_Y, START_X + 14, "0 clicks", btn_on_focus);
+  btn = button_create(stdscr, 3, 12, START_Y, START_X, "Cancel", btn_on_focus);
+  btn2 = button_create(stdscr, 3, 12, START_Y, START_X + 14, "Proceed", btn_on_focus);
 
   // Add both buttons to the focusable list
   app_add_container(app, (Container*)btn);
@@ -55,7 +55,7 @@ int main() {
 
   // You have to focus on something in order to interact with the program.
   // In this case, buttons have the 'button_select' function
-  button_select(app, btn->base.parent, (Container*)btn); 
+  button_select(app, (Container*)btn); 
   //app->focused_container = (Container*)btn; // you could do this instead
 
   // Application loop
