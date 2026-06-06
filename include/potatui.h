@@ -56,7 +56,8 @@ typedef struct {
   Container base;
   char content[255];
   int content_size;
-  int cursor_pos;
+  int cursor_pos; // cursor position inside the text
+  int text_pos; // start printing the text after this position
 } TextInput;
 
 
