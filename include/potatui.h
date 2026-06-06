@@ -61,6 +61,7 @@ void app_focus_on(Application* app, Container* con);
 void app_key_handle(Application* app, int c);
 void potatui_loop(Application* app);
 void potatui_end();
+int ctrl(int c);
 
 /**
  * Containers ----------------------------------------------------------------
