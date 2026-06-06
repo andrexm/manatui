@@ -98,8 +98,11 @@ int ctrl(int c) {
  */
 
 // initialize a container inside a parent
-void container_init(Container* con, WINDOW* parent) {
-  if (con == NULL || parent == NULL) exit(1);
+void container_init(void* obj, WINDOW* parent) {
+  if (obj == NULL || parent == NULL) exit(1);
+
+  Container* con = (Container*)obj;
+
   con->parent = parent;
   con->dwin = derwin(parent, con->height, con->width, con->start_y, con->start_x);
 
@@ -242,7 +245,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.actions = NULL;
   btn->base.user_data = NULL;
 
-  container_init(&btn->base, parent);
+  container_init(btn, parent);
   container_update(btn);
   wnoutrefresh(btn->base.dwin);
   doupdate();
@@ -365,7 +368,7 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->base.title = title;
 
   // init the List's derwin
-  container_init(&temp->base, parent);
+  container_init(temp, parent);
 
   // List properties
   temp->content = NULL;
@@ -539,7 +542,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->base.user_data = NULL;
   input->base.title = label;
 
-  container_init(&input->base, parent);
+  container_init(input, parent);
   container_update(input);
   wnoutrefresh(input->base.dwin);
   doupdate();
