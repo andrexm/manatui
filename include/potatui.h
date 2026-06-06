@@ -76,7 +76,7 @@ int ctrl(int c);
 /**
  * Containers ----------------------------------------------------------------
 */
-void container_init(Container* con, WINDOW* parent);
+void container_init(void* obj, WINDOW* parent);
 Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
 void vcontainer_print(Container* con, bool break_line, int y, int x, const char* format, va_list args);
 void container_print(Container* con, bool break_line, int y, int x, const char* format, ...);
