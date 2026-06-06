@@ -51,6 +51,14 @@ typedef struct {
   int scroll_top;
 } List;
 
+// Input type
+typedef struct {
+  Container base;
+  char content[255];
+  int content_size;
+  int cursor_pos;
+} TextInput;
+
 
 /**
  * Application ---------------------------------------------------------------
@@ -86,4 +94,13 @@ void _list_actions(void* app, int c);
 List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
 void list_item_add(List* list, const char* line, ...);
 void list_item_select(List* list, const int position);
+
+
+/**
+ * TextInput -----------------------------------------------------------------
+*/
+// on creating, renamed title to label, height = 3, and has_border is always true
+TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
+//void textinput_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
+void textinput_actions(void* app, int c);
 
