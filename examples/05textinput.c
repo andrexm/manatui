@@ -8,7 +8,6 @@ int main() {
   int start_x = (COLS / 2) - (width / 2);
   TextInput* input = textinput_create(stdscr, width, 1, start_x, "Your Name", NULL);
 
-  container_update((Container*)input, input->base.parent);
   app_add_container(app, (Container*)input);
   app->focused_container = (Container*)input;
 
