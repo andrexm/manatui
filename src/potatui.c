@@ -1,4 +1,3 @@
-#include <string.h>
 #include <ncurses.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -238,6 +237,12 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.on_focus = callback;
   btn->base.actions = NULL;
   btn->base.user_data = NULL;
+
+  container_init(&btn->base, parent);
+  container_update(&btn->base, parent);
+  wnoutrefresh(btn->base.dwin);
+  doupdate();
+  
   return btn;
 }
 
@@ -530,6 +535,9 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->base.title = label;
 
   container_init(&input->base, parent);
+  container_update((Container*)input, parent);
+  wnoutrefresh(input->base.dwin);
+  doupdate();
 
   return input;
 }
