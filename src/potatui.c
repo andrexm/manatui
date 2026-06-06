@@ -37,9 +37,9 @@ void app_add_container(Application* app, Container* con) {
 }
 
 // Move the focus to the specified container
-void app_focus_on(Application* app, Container* con) {
+void app_focus_on(Application* app, void* con) {
   if (con == NULL) return;
-  app->focused_container = con;
+  app->focused_container = (Container*)con;
 }
 
 // End ncurses
