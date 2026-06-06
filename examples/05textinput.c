@@ -56,7 +56,7 @@ int main() {
   app_add_container(app, (Container*)input);
   app_add_container(app, (Container*)disabled_input);
 
-  app->focused_container = (Container*)input; // start focusing on the enabled input
+  app_focus_on(app, input); // start focusing on the enabled input
 
   potatui_loop(app);
 

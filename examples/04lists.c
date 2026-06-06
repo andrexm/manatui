@@ -39,7 +39,7 @@ int main() {
 
   // set up list focus
   app_add_container(app, (Container*)list);
-  app->focused_container = (Container*)list;
+  app_focus_on(app, list); // start focusing on the list
 
   potatui_loop(app);
 
