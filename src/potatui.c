@@ -97,14 +97,14 @@ int ctrl(int c) {
  * Containers ------------------------------------------------------------------------
  */
 
-// initialize a container inside a parent
-void container_init(void* obj, WINDOW* parent) {
-  if (obj == NULL || parent == NULL) exit(1);
+// Initialize a container inside a parent
+// Obj is a component based on Container
+void container_init(void* obj) {
+  if (obj == NULL) exit(1);
 
   Container* con = (Container*)obj;
 
-  con->parent = parent;
-  con->dwin = derwin(parent, con->height, con->width, con->start_y, con->start_x);
+  con->dwin = derwin(con->parent, con->height, con->width, con->start_y, con->start_x);
 
   // so we have to activate keypad for every window
   keypad(con->dwin, TRUE);
@@ -126,7 +126,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->user_data = NULL;
 
   // Initialize before printing any content inside it
-  container_init(temp, parent);
+  container_init(temp);
   return temp;
 }
 
@@ -245,7 +245,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.actions = NULL;
   btn->base.user_data = NULL;
 
-  container_init(btn, parent);
+  container_init(btn);
   container_update(btn);
   wnoutrefresh(btn->base.dwin);
   doupdate();
@@ -366,9 +366,7 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->base.has_border = has_border;
   temp->base.on_focus = callback;
   temp->base.title = title;
-
-  // init the List's derwin
-  container_init(temp, parent);
+  temp->base.parent = parent;
 
   // List properties
   temp->content = NULL;
@@ -377,6 +375,9 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->base.actions = _list_actions;
   temp->base.user_data = NULL;
   temp->scroll_top = 0;
+
+  // init the List's derwin
+  container_init(temp);
 
   return temp;
 }
@@ -542,7 +543,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->base.user_data = NULL;
   input->base.title = label;
 
-  container_init(input, parent);
+  container_init(input);
   container_update(input);
   wnoutrefresh(input->base.dwin);
   doupdate();
