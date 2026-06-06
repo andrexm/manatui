@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "../include/potatui.h"
 
@@ -199,19 +200,18 @@ void container_print(Container *con, bool break_line, int y, int x, const char *
 // update the container after some change
 // obj is a component based on Container
 void container_update(void* obj) {
-  if (!obj) return;
+  if (obj == NULL) return;
 
   Container* con = (Container*)obj;
-  if (!con->dwin) return;
+  if (con->dwin == NULL) return;
 
   // first draw the borders if they exist
   if (con->has_border) {
     box(con->dwin, 0, 0);
-
+ 
     // print title if it has one
     if (con->title != NULL && con->title[0] != '\0') {
-      wmove(con->dwin, 0, 2);
-      wprintw(con->dwin, "< %s >", con->title);
+      mvwprintw(con->dwin, 0, 2, "< %s >", con->title);
     }
   }
 
@@ -229,24 +229,28 @@ void container_update(void* obj) {
 // Creates a new button instance
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
   Button* btn = (Button*)malloc(sizeof(Button));
-  if (btn == NULL) exit(1);
+  if (btn == NULL || parent == NULL) exit(1);
 
   // set up base container
   btn->base.height = height;
   btn->base.width = width;
   btn->base.start_y = start_y;
   btn->base.start_x = start_x;
-
-  btn->base.dwin = derwin(parent, height, width, start_y, start_x);
-
-  box(btn->base.dwin, 0, 0);
-  container_print(&btn->base, FALSE, 1, 1, " %s ", label);
+  btn->base.parent = parent;
   btn->base.on_focus = callback;
+  btn->base.is_focused = FALSE;
+  btn->base.has_border = TRUE;
   btn->base.actions = NULL;
   btn->base.user_data = NULL;
 
   container_init(btn);
+
+  snprintf(btn->label, sizeof(btn->label), "%s", label);
   container_update(btn);
+
+  int center_x = (width / 2) - (strlen(btn->label) / 2);  
+  container_print(&btn->base, FALSE, 1, 1, "%s", btn->label);
+
   wnoutrefresh(btn->base.dwin);
   doupdate();
   
@@ -254,13 +258,32 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
 }
 
 // position the cursor inside the specified button and add it to the app->focused_container
-void button_select(Application* app, WINDOW* parent, Container* btn) {
-  if (btn == NULL || btn->dwin == NULL) return;
+void button_select(Application* app, Container* btn) {
+  if (app == NULL || btn == NULL) return;
 
-  box(btn->dwin, 0, 0);
-  wmove(btn->dwin, 1, 1);
-  container_update(btn);
-  app_focus_on(app, btn);
+  if (app->focused_container != NULL) {
+    Button* old_btn = (Button*)app->focused_container;
+    int old_x = (old_btn->base.width / 2) - (strlen(old_btn->label) / 2);
+
+    container_print(app->focused_container, FALSE, 1, 1, "%-*s", old_btn->base.width - 2, " ");
+    container_print(app->focused_container, FALSE, 1, old_x, "%s", old_btn->label);
+    wnoutrefresh(app->focused_container->dwin);
+  }
+
+  // change focus to the new button
+  app->focused_container = btn;
+  Button* new_btn = (Button*)btn;
+  int new_x = (new_btn->base.width / 2) - (strlen(new_btn->label) / 2);
+
+  container_print(btn, FALSE, 1, 1, "%-*s", new_btn->base.width - 2, " ");
+  
+  // print label in BOLD
+  wattron(btn->dwin, A_BOLD);
+  container_print(btn, FALSE, 1, new_x, "%s", new_btn->label);
+  wattroff(btn->dwin, A_BOLD); // turn off BOLD
+  
+  wnoutrefresh(btn->dwin);
+  doupdate();
 }
 
 
