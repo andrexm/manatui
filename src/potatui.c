@@ -1,3 +1,4 @@
+#include <string.h>
 #include <ncurses.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -474,11 +475,30 @@ void _textinput_default_actions(void* context, int c) {
   // update boders and title
   container_update((Container*)input, input->base.parent);
 
+  // calculate which portion of the text to show and where to position the cursor
   int usable_width = input->base.width - 2;
-  container_print((Container*)input, FALSE, 1, 1, "%-*s", usable_width, input->content);
+  if (input->content_size < usable_width) {
+    input->text_pos = 0;
+  }
+  else {
+    // the cursor moves beyond the left visible area
+    if (input->cursor_pos < input->text_pos) {
+      input->text_pos = input->cursor_pos;
+    }
+    // the cursor moves beyond the right visible area
+    if (input->cursor_pos >= input->text_pos + usable_width) {
+      input->text_pos = input->cursor_pos - usable_width + 1;
+    }
+  }
 
-  wmove(input->base.dwin, 1, 1 + input->cursor_pos);
+  // where the cursor visually appears in the input
+  int curs_pos_at_container = input->cursor_pos - input->text_pos;
 
+  // print that portion of text and position the cursor
+  container_print((Container*)input, FALSE, 1, 1, "%-*s", usable_width, &input->content[input->text_pos]);
+  wmove(input->base.dwin, 1, curs_pos_at_container + 1);
+
+  // update
   wnoutrefresh(input->base.dwin);
   doupdate();
 
@@ -495,6 +515,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->content[0] = '\0';
   input->content_size = 0;
   input->cursor_pos = 0;
+  input->text_pos = 0;
 
   // base container properties
   input->base.actions = _textinput_default_actions;
