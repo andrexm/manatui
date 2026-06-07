@@ -18,6 +18,11 @@ typedef struct {
   int start_x;
   int start_y;
 
+  // colors
+  const char* foreground; // "#0099ff"
+  const char* background; // "#000000"
+  int color_pair_id; // the framework generates
+
   const char* title;
   bool has_border;
   bool is_focused;
@@ -82,6 +87,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
 void vcontainer_print(Container* con, bool break_line, int y, int x, const char* format, va_list args);
 void container_print(Container* con, bool break_line, int y, int x, const char* format, ...);
 void container_update(void* obj);
+void container_apply_style(void* con);
 
 /**
  * Buttons -------------------------------------------------------------------
