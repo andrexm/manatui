@@ -27,6 +27,12 @@ int main() {
   List* list = list_create(stdscr, 8, 50, 2, 2, "Languages", TRUE, list_focus);
   list->base.user_data = list; // add the list itself to the list_focus context
 
+  // OPTIONAL - adding some colors
+  list->base.foreground = "#ff7823";
+  list->base.background = "#222226";
+  container_apply_style(list);
+
+  // adding some content to the list
   for (int i = 0; i < 10; i++) {
     list_item_add(list, "This is the line N%d!", i+1);
   }
