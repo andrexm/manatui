@@ -7,6 +7,33 @@
 
 #include "../include/potatui.h"
 
+
+/**
+ * Colors ----------------------------------------------------------------------------
+ */
+
+static int global_color_pair_counter = 1;
+static int global_color_id_counter = 16; // avoid overwritting the default colors
+
+// Converts a hex color to the ncurses format
+int _register_hex_color(int color_id, const char* hex_str) {
+  if (hex_str == NULL || hex_str[0] != '#') return -1;
+
+  unsigned int r, g, b;
+
+  // get the hex values from hex_str
+  sscanf(hex_str + 1, "%02x%02x%02x", &r, &g, &b);
+
+  // convert to what ncurses expects - from 0-255 scale to 0-1000 scale
+  short ncurses_r = (short)((r * 1000) / 255);
+  short ncurses_g = (short)((g * 1000) / 255);
+  short ncurses_b = (short)((b * 1000) / 255);
+
+  init_color(color_id, ncurses_r, ncurses_g, ncurses_b);
+  return 0;
+}
+
+
 /**
  * Starting and Ending ---------------------------------------------------------------
  */
@@ -19,6 +46,10 @@ Application* potatui_init() {
   cbreak();
   keypad(stdscr, TRUE);
 
+  if (has_colors()) {
+    start_color();
+  }
+  
   Application* app = (Application*)malloc(sizeof(Application));
   if (app == NULL) exit(1);
 
@@ -206,6 +237,12 @@ void container_update(void* obj) {
   Container* con = (Container*)obj;
   if (con->dwin == NULL) return;
 
+  // start the colors
+  if (con->color_pair_id > 0) {
+    wattron(con->dwin, COLOR_PAIR(con->color_pair_id));
+    wbkgd(con->dwin, COLOR_PAIR(con->color_pair_id));
+  }
+
   // first draw the borders if they exist
   if (con->has_border) {
     box(con->dwin, 0, 0);
@@ -216,10 +253,35 @@ void container_update(void* obj) {
     }
   }
 
+  // end the colors
+  if (con->color_pair_id > 0) {
+    wattroff(con->dwin, COLOR_PAIR(con->color_pair_id));
+  }
+
   // the update
   wnoutrefresh(con->parent);
   wnoutrefresh(con->dwin);
   doupdate();
+}
+
+// Apply color system
+void container_apply_style(void* con) {
+  if (!has_colors()) return;
+
+  Container* container = (Container*)con;
+  if (container->foreground != NULL && container->background != NULL) {
+    int fg_id = global_color_id_counter++;
+    int bg_id = global_color_id_counter++;
+    int pair_id = global_color_pair_counter++;
+
+    // init colors
+    _register_hex_color(fg_id, container->foreground);
+    _register_hex_color(bg_id, container->background);
+
+    // init color pair
+    init_pair(pair_id, fg_id, bg_id);
+    container->color_pair_id = pair_id;
+  }
 }
 
 
