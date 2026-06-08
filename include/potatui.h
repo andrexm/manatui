@@ -146,3 +146,4 @@ void textarea_add_line(TextArea* textarea, const char* line);
 void textarea_destroy(TextArea* textarea);
 void textarea_handle_key_down(TextArea* textarea, int max_visible_lines);
 void textarea_handle_key_up(TextArea* textarea);
+void textarea_handle_key_enter(TextArea* textarea);
