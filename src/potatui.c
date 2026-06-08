@@ -661,6 +661,101 @@ void _textarea_set_line_width(TextArea* textarea) {
   textarea->line_number_width = digits;
 }
 
+int _textarea_get_max_visible_lines(TextArea* textarea) {
+  int max_visible_lines = textarea->base.height - 2;
+  if (max_visible_lines < 1) max_visible_lines = 1;
+  return max_visible_lines;
+}
+
+int _textarea_get_usable_width(TextArea* textarea) {
+  int usable_width = textarea->base.width - textarea->line_number_width - 3;
+  if (usable_width < 1) usable_width = 1;
+  return usable_width;
+}
+
+// Handles cursor position and text scroll after KEY_DOWN is pressed
+void textarea_handle_key_down(TextArea* textarea, int max_visible_lines) { 
+  if (textarea->total_lines - 1 > textarea->cursor_row) {
+    textarea->cursor_row++;
+
+    // if the bottom line is smaller than the current
+    int next_line_len = strlen(textarea->lines[textarea->cursor_row]);
+    if (textarea->cursor_col > next_line_len) {
+      textarea->cursor_col = next_line_len;
+    }
+
+    // fix the cursor visibility if the new line is very short
+    if (textarea->cursor_col < textarea->scroll_col) {
+      textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : textarea->cursor_col;
+    }
+
+    // scroll the text if necessary
+    if (textarea->cursor_row >= textarea->scroll_col + max_visible_lines) {
+      textarea->scroll_row = textarea->cursor_row - max_visible_lines + 1;
+    }
+  }
+}
+
+// Handles cursor position and text scroll after KEY_UP is pressed
+void textarea_handle_key_up(TextArea* textarea) { 
+  if (textarea->cursor_row > 0) {
+    textarea->cursor_row--;
+
+    // adjust cursor position if the above line is shorter
+    int prev_line_len = strlen(textarea->lines[textarea->cursor_row]);
+    if (textarea->cursor_col > prev_line_len) {
+      textarea->cursor_col = prev_line_len;
+    }
+
+    // fix the cursor visibility if the new line is very short
+    if (textarea->cursor_col < textarea->scroll_col) {
+      textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : textarea->cursor_col;
+    }
+
+    // returns the text scroll back if necessary
+    if (textarea->cursor_row < textarea->scroll_row) {
+      textarea->scroll_row = textarea->cursor_row;
+    }
+  }
+}
+
+// Handles cursor position and text scroll after KEY_RIGHT is pressed
+void textarea_handle_key_right(TextArea* textarea, int usable_width) {
+  int current_line_len = strlen(textarea->lines[textarea->cursor_row]);
+    
+  if (textarea->cursor_col < current_line_len) {
+    textarea->cursor_col++;
+
+    // scroll to the right
+    if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
+      textarea->scroll_col = textarea->cursor_col - usable_width + 1;
+    }
+  }  
+}
+
+// Handles cursor position and text scroll after KEY_LEFT is pressed
+void textarea_handle_key_left(TextArea *textarea) {
+  if (textarea->cursor_col > 0) {
+    textarea->cursor_col--;
+
+    // scroll to the left
+    if (textarea->cursor_col < textarea->scroll_col) {
+      textarea->scroll_col = textarea->cursor_col;
+    }
+  } 
+}
+
+//
+// When scrolling to the right, if the scroll_col for bigger than this line, the printer will print from
+// memory addressess after the string, this prevents that from happening, by giving " " (space) to the printer
+// 
+char* _textarea_get_printable_content(TextArea* textarea, int file_line_index) {
+  char* content = (textarea->scroll_col <= strlen(textarea->lines[file_line_index]))
+                  ? &textarea->lines[file_line_index][textarea->scroll_col]
+                  : " ";
+  return content;
+}
+
 // Default behavior of the TextArea
 void _textarea_actions(void* context, int c) {
   TextArea* textarea = (TextArea*)context;
@@ -668,88 +763,18 @@ void _textarea_actions(void* context, int c) {
 
   curs_set(0);
 
-  int max_visible_lines = textarea->base.height - 2;
-  if (max_visible_lines < 1) max_visible_lines = 1;
-
-  int usable_width = textarea->base.width - textarea->line_number_width - 3;
-  if (usable_width < 1) usable_width = 1;
+  int max_visible_lines = _textarea_get_max_visible_lines(textarea);
+  int usable_width = _textarea_get_usable_width(textarea);
 
   // fix line number width
   if (textarea->line_number_width == 0) {
     _textarea_set_line_width(textarea);
   }
 
-  // move cursor DOWN
-  if (c == KEY_DOWN) {
-    if (textarea->total_lines - 1 > textarea->cursor_row) {
-      textarea->cursor_row++;
-
-      // if the bottom line is smaller than the current
-      int next_line_len = strlen(textarea->lines[textarea->cursor_row]);
-      if (textarea->cursor_col > next_line_len) {
-        textarea->cursor_col = next_line_len;
-      }
-
-      // fix the cursor visibility if the new line is very short
-      if (textarea->cursor_col < textarea->scroll_col) {
-        textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : textarea->cursor_col;
-      }
-
-      // scroll the text if necessary
-      if (textarea->cursor_row >= textarea->scroll_col + max_visible_lines) {
-        textarea->scroll_row = textarea->cursor_row - max_visible_lines + 1;
-      }
-    }
-  }
-
-  // move cursor UP
-  if (c == KEY_UP) {
-    if (textarea->cursor_row > 0) {
-      textarea->cursor_row--;
-
-      // adjust cursor position if the above line is shorter
-      int prev_line_len = strlen(textarea->lines[textarea->cursor_row]);
-      if (textarea->cursor_col > prev_line_len) {
-        textarea->cursor_col = prev_line_len;
-      }
-
-      // fix the cursor visibility if the new line is very short
-      if (textarea->cursor_col < textarea->scroll_col) {
-        textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : textarea->cursor_col;
-      }
-
-      // returns the text scroll back if necessary
-      if (textarea->cursor_row < textarea->scroll_row) {
-        textarea->scroll_row = textarea->cursor_row;
-      }
-    }
-  }
-
-  // move cursor to the right if the current line is long enough
-  if (c == KEY_RIGHT) {
-    int current_line_len = strlen(textarea->lines[textarea->cursor_row]);
-    
-    if (textarea->cursor_col < current_line_len) {
-      textarea->cursor_col++;
-
-      // scroll to the right
-      if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
-        textarea->scroll_col = textarea->cursor_col - usable_width + 1;
-      }
-    }
-  }
-
-  // move the cursor to the left if there is space in the text
-  if (c == KEY_LEFT) {
-    if (textarea->cursor_col > 0) {
-      textarea->cursor_col--;
-
-      // scroll to the left
-      if (textarea->cursor_col < textarea->scroll_col) {
-        textarea->scroll_col = textarea->cursor_col;
-      }
-    }
-  }
+  if (c == KEY_DOWN) textarea_handle_key_down(textarea, max_visible_lines); // move cursor DOWN
+  if (c == KEY_UP) textarea_handle_key_up(textarea); // move cursor UP
+  if (c == KEY_RIGHT) textarea_handle_key_right(textarea, usable_width); // move cursor RIGHT
+  if (c == KEY_LEFT) textarea_handle_key_left(textarea); // move cursor LEFT
 
   container_update(textarea);
 
@@ -761,9 +786,7 @@ void _textarea_actions(void* context, int c) {
     // stop on the last line
     if (file_line_index >= textarea->total_lines) break;
 
-    // when scrolling to the right, if the scroll_col for bigger than this line, the printer will print from
-    // memory addressess after the string, this prevents that from happening, by giving " " (space) to the printer
-    char* content_to_print = (textarea->scroll_col <= strlen(textarea->lines[file_line_index])) ? &textarea->lines[file_line_index][textarea->scroll_col] : " ";
+    char* content_to_print = _textarea_get_printable_content(textarea, file_line_index);
     container_print(
       (Container*)textarea,
       FALSE,
