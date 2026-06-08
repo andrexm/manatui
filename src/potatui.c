@@ -742,7 +742,18 @@ void textarea_handle_key_left(TextArea *textarea) {
     if (textarea->cursor_col < textarea->scroll_col) {
       textarea->scroll_col = textarea->cursor_col;
     }
-  } 
+  } else {
+    // move the cursor to the end of the line above
+    if (textarea->cursor_row > 0) {
+      textarea->cursor_row--;
+      textarea->cursor_col = strlen(textarea->lines[textarea->cursor_row]) - 1;
+
+      int visible_area = textarea->base.width - 3 - textarea->line_number_width;
+      if (strlen(textarea->lines[textarea->cursor_row]) > visible_area) {
+        textarea->scroll_col = strlen(textarea->lines[textarea->cursor_row]) - (visible_area);
+      }
+    }
+  }
 }
 
 //
@@ -754,6 +765,74 @@ char* _textarea_get_printable_content(TextArea* textarea, int file_line_index) {
                   ? &textarea->lines[file_line_index][textarea->scroll_col]
                   : " ";
   return content;
+}
+
+// remove a character just at the left from the current cursor position
+void _textarea_remove_left_char(TextArea* textarea) {
+  if (textarea == NULL) return;
+
+  // NOTE case 01: line 0, column 0
+  if (textarea->cursor_col == 0 && textarea->cursor_row == 0) {
+    return;
+  }
+
+  // NOTE case 02: default behavior - take characters from right to left
+  if (textarea->cursor_col > 0) {
+    // length of the current line
+    int line_len = strlen(textarea->lines[textarea->cursor_row]);
+    char* current_line = textarea->lines[textarea->cursor_row];
+
+    // move characters from right to left, overwitting the target
+    for (int i = textarea->cursor_col; i < line_len; i++) {
+      current_line[i - 1] = current_line[i];
+    }
+    current_line[line_len - 1] = '\0';
+    textarea->cursor_col--; // update cursor
+
+    // update scroll if the cursor is at a position before the visible area
+    if (textarea->cursor_col < textarea->scroll_col) {
+      textarea->scroll_col = textarea->cursor_col;
+    }
+    return;
+  }
+
+  // NOTE case 03: when the cursor is at the begining of a line, merge this line with the end of the line above
+  int prev_row = textarea->cursor_row - 1;
+  int prev_len = strlen(textarea->lines[prev_row]);
+  int current_len = strlen(textarea->lines[textarea->cursor_row]);
+
+  // 1 - get enough space for the previous line
+  char* new_prev_line = (char*)realloc(textarea->lines[prev_row], (prev_len + current_len + 1) * sizeof(char));
+  if (new_prev_line == NULL) return;
+  textarea->lines[prev_row] = new_prev_line;
+
+  // merge these two lines
+  strcpy(textarea->lines[prev_row] + prev_len, textarea->lines[textarea->cursor_row]);
+  free(textarea->lines[textarea->cursor_row]); // free the moved line
+
+  // move all the lines, after the recently moved one, one position up
+  for (int i = textarea->cursor_row; i < textarea->total_lines - 1; i++) {
+    textarea->lines[i] = textarea->lines[i + 1];
+  } 
+  textarea->lines[textarea->total_lines - 1] = NULL; // clear the last index
+  textarea->total_lines--;
+
+  // move the cursor to where the lines were merged
+  textarea->cursor_row--;
+  textarea->cursor_col = prev_len;
+
+  // update the visible area
+  if (textarea->cursor_row < textarea->scroll_row) {
+    textarea->scroll_row = textarea->cursor_row;
+  }
+
+  int usable_width = _textarea_get_usable_width(textarea);
+  if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
+    textarea->scroll_col = textarea->cursor_col - usable_width + 1;
+  }
+  else if (textarea->cursor_col < textarea->scroll_col) {
+    textarea->scroll_col = textarea->cursor_col;
+  }
 }
 
 // Default behavior of the TextArea
@@ -771,11 +850,26 @@ void _textarea_actions(void* context, int c) {
     _textarea_set_line_width(textarea);
   }
 
-  if (c == KEY_DOWN) textarea_handle_key_down(textarea, max_visible_lines); // move cursor DOWN
-  if (c == KEY_UP) textarea_handle_key_up(textarea); // move cursor UP
-  if (c == KEY_RIGHT) textarea_handle_key_right(textarea, usable_width); // move cursor RIGHT
-  if (c == KEY_LEFT) textarea_handle_key_left(textarea); // move cursor LEFT
+  switch (c) {
+    case KEY_DOWN: textarea_handle_key_down(textarea, max_visible_lines); break; // move cursor DOWN
+    case KEY_UP: textarea_handle_key_up(textarea); break; // move cursor UP
+    case KEY_RIGHT: textarea_handle_key_right(textarea, usable_width); break; // move cursor RIGHT
+    case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
 
+    case KEY_BACKSPACE:
+      if (textarea->disabled == FALSE) {
+        _textarea_remove_left_char(textarea);
+      }
+      break;
+
+    // print the character
+    default:
+      /*if (c >= 32 && c <= 126 && textarea->disabled == FALSE) {
+        _textarea_add_char(textarea);
+        textarea->cursor_col++; // the cursor advances after typing
+      }*/
+      break;
+  }
   container_update(textarea);
 
   // render the visible text and line numbers
@@ -783,25 +877,43 @@ void _textarea_actions(void* context, int c) {
     int file_line_index = textarea->scroll_row + i;
     int screen_row = i + 1;
 
-    // stop on the last line
-    if (file_line_index >= textarea->total_lines) break;
+    // if the line exists, draw the line numebr and the text
+    if (file_line_index < textarea->total_lines) {
+      container_print(
+        (Container*)textarea,
+        FALSE,
+        screen_row,
+        textarea->line_number_width + 2,
+        "%-*.*s",
+        usable_width,
+        usable_width,
+        _textarea_get_printable_content(textarea, file_line_index)
+      );
 
-    char* content_to_print = _textarea_get_printable_content(textarea, file_line_index);
-    container_print(
-      (Container*)textarea,
-      FALSE,
-      screen_row,
-      textarea->line_number_width + 2,
-      "%-*.*s",
-      usable_width,
-      usable_width,
-      content_to_print
-    );
-
-    if (textarea->show_line_numbers) {
-      // print the line number
-      mvwprintw(textarea->base.dwin, screen_row, 1, "%*d", textarea->line_number_width, file_line_index + 1);
+      if (textarea->show_line_numbers) {
+        // print the line number
+        mvwprintw(textarea->base.dwin, screen_row, 1, "%*d", textarea->line_number_width, file_line_index + 1);
+      }
     }
+    // if the line was removed, overwrite the remaining region with empty chars
+    else {
+      container_print(
+        (Container*)textarea,
+        FALSE,
+        screen_row,
+        textarea->line_number_width + 2,
+        "%-*s",
+        usable_width,
+        ""
+      );
+
+      // clear the line number
+      if (textarea->show_line_numbers) {
+        mvwprintw(textarea->base.dwin, screen_row, 1, "%*s", textarea->line_number_width, "");
+      }
+    }
+
+
   }
 
   // update cursor
