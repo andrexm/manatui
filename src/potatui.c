@@ -269,6 +269,8 @@ void container_apply_style(void* con) {
   if (!has_colors()) return;
 
   Container* container = (Container*)con;
+
+  // init common color system
   if (container->foreground != NULL && container->background != NULL) {
     int fg_id = global_color_id_counter++;
     int bg_id = global_color_id_counter++;
@@ -879,6 +881,18 @@ void _textarea_actions(void* context, int c) {
 
     // if the line exists, draw the line numebr and the text
     if (file_line_index < textarea->total_lines) {
+      // print with specific content color if it is set
+      if (textarea->content_color != NULL) {
+        wattron(
+          textarea->base.dwin,
+          COLOR_PAIR(textarea->content_color_id)
+        );
+        wbkgd(
+          textarea->base.dwin,
+          COLOR_PAIR(textarea->base.color_pair_id)
+        );
+      }
+      
       container_print(
         (Container*)textarea,
         FALSE,
@@ -889,6 +903,12 @@ void _textarea_actions(void* context, int c) {
         usable_width,
         _textarea_get_printable_content(textarea, file_line_index)
       );
+
+      // if we have the content specific color active
+      if (textarea->content_color != NULL) {
+        wattroff(textarea->base.dwin, COLOR_PAIR(textarea->content_color_id));
+        wattroff(textarea->base.dwin, COLOR_PAIR(textarea->base.color_pair_id));
+      }
 
       if (textarea->show_line_numbers) {
         // print the line number
@@ -958,6 +978,9 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->base.user_data = NULL;
   textarea->base.title = label;
 
+  // extra style default value
+  textarea->content_color = NULL;
+
   container_init(textarea);
   container_update(textarea);
 
@@ -972,9 +995,31 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   return textarea;
 }
 
+// Init colors specific to the textarea.
+// For now, the only extra color is for the content inside the textarea.
+void  _textarea_init_content_style(TextArea* textarea) {
+  if (textarea == NULL || !has_colors()) return;
+
+  int fg_id = global_color_id_counter++;
+  int bg_id = global_color_id_counter++;
+  int pair_id = global_color_pair_counter++;
+
+  // init colors
+  _register_hex_color(fg_id, textarea->content_color);
+  _register_hex_color(bg_id, textarea->base.background);
+
+  // init color pair
+  init_pair(pair_id, fg_id, bg_id);
+  textarea->content_color_id = pair_id;
+}
+
 // Draw the textarea content on screen
 void textarea_render(TextArea *textarea) {
   if (textarea == NULL) return;
+
+  // init specific colors
+  // the content can a different color from the borders
+  _textarea_init_content_style(textarea);
 
   _textarea_actions(textarea, 0);
 }
