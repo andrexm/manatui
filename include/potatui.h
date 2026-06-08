@@ -27,7 +27,7 @@ typedef struct {
   bool has_border;
   bool is_focused;
   void (*on_focus)(int, void*);
-  void (*actions)(void*, int); // this should be used to implement intrinsic behavior into specific components within the lib
+  void (*actions)(void*, unsigned int); // this should be used to implement intrinsic behavior into specific components within the lib
   void* user_data; // this can be anything the user needs to manipulate inside the (*on_focus)(int, void*)
   WINDOW* parent;
   WINDOW* dwin;
@@ -97,10 +97,10 @@ typedef struct {
 Application* potatui_init();
 void app_add_container(Application* app, Container* con);
 void app_focus_on(Application* app, void* con);
-void app_key_handle(Application* app, int c);
+void app_key_handle(Application* app, unsigned int c);
 void potatui_loop(Application* app);
 void potatui_end();
-int ctrl(int c);
+unsigned int ctrl(unsigned int c);
 
 /**
  * Containers ----------------------------------------------------------------
