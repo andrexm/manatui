@@ -732,7 +732,19 @@ void textarea_handle_key_right(TextArea* textarea, int usable_width) {
     if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
       textarea->scroll_col = textarea->cursor_col - usable_width + 1;
     }
-  }  
+  }
+  // cursor jumps to the start of the next line
+  else if (textarea->cursor_row < textarea->total_lines - 1) {
+    textarea->cursor_col = 0;
+    textarea->scroll_col = 0;
+    textarea->cursor_row++;
+
+    // scroll down if necessary
+    int max_visible_lines = _textarea_get_max_visible_lines(textarea);
+    if (textarea->cursor_row >= textarea->scroll_row + max_visible_lines) {
+      textarea->scroll_row++;
+    }
+  }
 }
 
 // Handles cursor position and text scroll after KEY_LEFT is pressed
