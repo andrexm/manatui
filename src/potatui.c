@@ -769,6 +769,35 @@ char* _textarea_get_printable_content(TextArea* textarea, int file_line_index) {
   return content;
 }
 
+// Handle adding a char to the text
+void _textarea_add_char(TextArea* textarea, int c) {
+  if (textarea == NULL) return;
+
+  // calculate the current lien length
+  int current_len = strlen(textarea->lines[textarea->cursor_row]);
+
+  // get space to allocate a new char and the null terminator
+  char* temp_line = (char*)realloc(textarea->lines[textarea->cursor_row], (current_len + 2) * sizeof(char));
+  if (temp_line == NULL) exit(1);
+
+  textarea->lines[textarea->cursor_row] = temp_line;
+
+  // move each character if necessary
+  for (int i = current_len; i >= textarea->cursor_col; i--) {
+    textarea->lines[textarea->cursor_row][i + 1] = textarea->lines[textarea->cursor_row][i];
+  }
+
+  // add the new character and update the cursor position
+  textarea->lines[textarea->cursor_row][textarea->cursor_col] = (char)c;
+  textarea->cursor_col++;
+
+  // adjust scroll
+  int usable_width = _textarea_get_usable_width(textarea);
+  if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
+    textarea->scroll_col = textarea->cursor_col - usable_width + 1;
+  }
+}
+
 // remove a character just at the left from the current cursor position
 void _textarea_remove_left_char(TextArea* textarea) {
   if (textarea == NULL) return;
@@ -866,10 +895,9 @@ void _textarea_actions(void* context, int c) {
 
     // print the character
     default:
-      /*if (c >= 32 && c <= 126 && textarea->disabled == FALSE) {
-        _textarea_add_char(textarea);
-        textarea->cursor_col++; // the cursor advances after typing
-      }*/
+      if (c >= 32 && c <= 126 && textarea->disabled == FALSE) {
+        _textarea_add_char(textarea, c);
+      }
       break;
   }
   container_update(textarea);
