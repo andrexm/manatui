@@ -20,6 +20,10 @@ int main() {
 
   textarea->base.user_data = textarea;
   textarea->show_line_numbers = TRUE;
+  textarea->base.foreground = "#177458";
+  textarea->base.background = "#000000";
+  textarea->content_color = "#6b7a73";
+  container_apply_style(textarea);
 
   // add some lines to the textarea
   textarea_add_line(textarea, "This is the first line! This text continues until where I want it to stop. Maybe here, or here.");
