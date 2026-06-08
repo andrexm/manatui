@@ -86,6 +86,8 @@ typedef struct {
   bool show_line_numbers;
   int line_number_width;
   bool disabled;
+  char* content_color;
+  int content_color_id;
 } TextArea;
 
 
