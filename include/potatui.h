@@ -67,6 +67,27 @@ typedef struct {
   bool disabled;
 } TextInput;
 
+// TextArea type
+typedef struct {
+  Container base;
+  char** lines; // array of lines
+  int total_lines;
+  int lines_capacity;
+
+  // where the cursor is
+  int cursor_row;
+  int cursor_col;
+
+  // from where we are printing
+  int scroll_row;
+  int scroll_col;
+
+  // other settings
+  bool show_line_numbers;
+  int line_number_width;
+  bool disabled;
+} TextArea;
+
 
 /**
  * Application ---------------------------------------------------------------
@@ -110,6 +131,14 @@ void list_item_select(List* list, const int position);
 */
 // on creating, renamed title to label, height = 3, and has_border is always true
 TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
-void textinput_actions(void* app, int c);
 void textinput_render(TextInput* input);
 
+
+/**
+ * TextArea ------------------------------------------------------------------
+*/
+
+TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
+void textarea_render(TextArea* textarea);
+void textarea_add_line(TextArea* textarea, const char* line);
+void textarea_destroy(TextArea* textarea);

@@ -642,3 +642,211 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
 void textinput_render(TextInput* input) {
   _textinput_default_actions(input, 0);
 }
+
+
+/**
+ * TextArea ------------------------------------------------------------------
+*/
+
+// calculates and sets the number of digits for the lines numbers
+void _textarea_set_line_width(TextArea* textarea) {
+  int temp_lines = textarea->total_lines;
+  int digits = 1;
+
+  while (temp_lines >= 10) {
+    digits++;
+    temp_lines /= 10;
+  }
+
+  textarea->line_number_width = digits;
+}
+
+// Default behavior of the TextArea
+void _textarea_actions(void* context, int c) {
+  TextArea* textarea = (TextArea*)context;
+  if (textarea == NULL) return;
+
+  curs_set(0);
+
+  int max_visible_lines = textarea->base.height - 2;
+  if (max_visible_lines < 1) max_visible_lines = 1;
+
+  // move cursor DOWN
+  if (c == KEY_DOWN) {
+    if (textarea->total_lines -1 > textarea->cursor_row) {
+      textarea->cursor_row++;
+
+      // if the bottom line is smaller than the current
+      int next_line_len = strlen(textarea->lines[textarea->cursor_row]);
+      if (textarea->cursor_col > next_line_len) {
+        textarea->cursor_col = next_line_len;
+      }
+    }
+  }
+
+  // move cursor UP
+  if (c == KEY_UP) {
+    if (textarea->cursor_row > 0) {
+      textarea->cursor_row--;
+
+      // adjust cursor position if the above line is shorter
+      int prev_line_len = strlen(textarea->lines[textarea->cursor_row]);
+      if (textarea->cursor_col > prev_line_len) {
+        textarea->cursor_col = prev_line_len;
+      }
+    }
+  }
+
+  container_update(textarea);
+
+  // fix line number width
+  if (textarea->line_number_width == 0) {
+    _textarea_set_line_width(textarea);
+  }
+
+  int usable_width = textarea->base.width - textarea->line_number_width - 3;
+  if (usable_width < 1) usable_width = 1;
+
+  // render the visible text and line numbers
+  for (int i = 0; i < textarea->total_lines; i++) {
+    int file_line_index = textarea->scroll_row + i;
+    int screen_row = i + 1;
+
+    // avoid drawing beyond the bottom border
+    //if (screen_row >= textarea->base.height - 1) break;
+    // stop on the last line
+    if (file_line_index >= textarea->total_lines) break;
+
+    container_print(
+      (Container*)textarea,
+      FALSE,
+      screen_row,
+      textarea->line_number_width + 2,
+      "%-*.*s",
+      usable_width,
+      usable_width,
+      textarea->lines[file_line_index]
+    );
+
+    if (textarea->show_line_numbers) {
+      // print the line number
+      mvwprintw(textarea->base.dwin, screen_row, 1, "%*d", textarea->line_number_width, i + 1);
+    }
+  }
+
+  container_update(textarea);
+  // update cursor
+  int visual_y = textarea->cursor_row - textarea->scroll_row + 1;
+  int visual_x = textarea->line_number_width + textarea->cursor_col + 2; 
+  wmove(textarea->base.dwin, visual_y, visual_x);
+
+  // update screen buffers
+  wnoutrefresh(textarea->base.dwin);
+  doupdate();
+
+  curs_set(1);
+}
+
+// create a new TextArea
+TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
+  if (parent == NULL) return NULL;
+  
+  TextArea* textarea = (TextArea*)malloc(sizeof(TextArea));
+  if (textarea == NULL) exit(1);
+
+  textarea->lines = NULL;
+  textarea->total_lines = 0;
+  textarea->lines_capacity = 0;
+  textarea->cursor_row = 0;
+  textarea->cursor_col = FALSE;
+  textarea->scroll_row = 0;
+  textarea->scroll_col = FALSE;
+  textarea->disabled = FALSE;
+  textarea->show_line_numbers = FALSE;
+  textarea->line_number_width = 2;
+
+  // base container properties
+  textarea->base.actions = _textarea_actions;
+  textarea->base.has_border = TRUE;
+  textarea->base.height = height; // top and bottom borders plus content in one line
+  textarea->base.on_focus = callback;
+  textarea->base.parent = parent;
+  textarea->base.start_x = start_x;
+  textarea->base.start_y = start_y;
+  textarea->base.width = width;
+  textarea->base.user_data = NULL;
+  textarea->base.title = label;
+
+  container_init(textarea);
+  container_update(textarea);
+
+  wmove(textarea->base.dwin, 1, 1);
+  wnoutrefresh(textarea->base.dwin);
+  doupdate();
+
+  int initial_y = textarea->cursor_row + 1;
+  int initial_x = textarea->line_number_width + 2 + textarea->cursor_col;
+  wmove(textarea->base.dwin, initial_y, initial_x);
+
+  return textarea;
+}
+
+// Draw the textarea content on screen
+void textarea_render(TextArea *textarea) {
+  if (textarea == NULL) return;
+
+  _textarea_actions(textarea, 0);
+}
+
+// Adds a new line under the cursor position (after the current active line)
+// and move the cursor to the new line.
+// On the first load, the cursor should appear at the top of the textarea.
+void textarea_add_line(TextArea* textarea, const char* line) {
+  if (textarea == NULL) exit(1);
+
+  // make sure there is enough space for a new line
+  if (textarea->total_lines >= textarea->lines_capacity) {
+    // start with capacity for 8 lines
+    int new_capacity = (textarea->lines_capacity == 0) ? 8 : textarea->lines_capacity * 2;
+
+    char** temp_lines = (char**)realloc(textarea->lines, new_capacity * sizeof(char*));
+    if (temp_lines == NULL) exit(1);
+
+    textarea->lines = temp_lines;
+    textarea->lines_capacity = new_capacity;
+  }
+
+  // allocate enough space for the new string
+  int text_length = line ? strlen(line) : 0;
+  textarea->lines[textarea->total_lines] = (char*)malloc((text_length + 1) * sizeof(char));
+  if (textarea->lines[textarea->total_lines] == NULL) exit(1);
+
+  // copy line to the textarea
+  if (line != NULL) {
+    strcpy(textarea->lines[textarea->total_lines], line);
+  } else {
+    // create a valid empty string on NULL
+    textarea->lines[textarea->total_lines][0] = '\0';
+  }
+
+  // update lines total
+  textarea->total_lines++;
+}
+
+// free memory requested by the textarea
+void textarea_destroy(TextArea* textarea) {
+  if (textarea == NULL) return;
+
+  if (textarea->lines != NULL) {
+    // clear each line
+    for (int i = 0; i < textarea->total_lines ; i++) {
+      if (textarea->lines[i] != NULL) {
+        free(textarea->lines[i]);
+      }
+    }
+    // free the lines table
+    free(textarea->lines);
+  }
+  // free the structure
+  free(textarea);
+}
