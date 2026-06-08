@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <locale.h>
 
 #include "../include/potatui.h"
 
@@ -39,6 +40,8 @@ int _register_hex_color(int color_id, const char* hex_str) {
 
 // Start app
 Application* potatui_init() {
+  setlocale(LC_ALL, "");
+  
   initscr();
   noecho();
   raw();
@@ -78,7 +81,7 @@ void potatui_end() {
 }
 
 // Handle all key inputs
-void app_key_handle(Application* app, int c) {
+void app_key_handle(Application* app, unsigned int c) {
   if (app == NULL) return;
 
   if (c == ctrl('q')) {
@@ -112,14 +115,14 @@ void potatui_loop(Application* app) {
     container_update(app->focused_container);
   }
 
-  int c;
+  unsigned int c; // unsigned allows using the extended ASCII codes
   while ((c = getch())) {
     app_key_handle(app, c);
   }
 }
 
 // CTRL + key - doing this as a function helps on portability to other languages
-int ctrl(int c) {
+unsigned int ctrl(unsigned int c) {
   return ((c) & (0x1f));
 }
 
@@ -401,7 +404,7 @@ void list_render(List* list) {
 }
  
 // This executes when the list is focused, with the purpose of managing default actions of each list
-void _list_actions(void* context, int c) {
+void _list_actions(void* context, unsigned int c) {
   if (context == NULL) return;
 
   // if the list is focused, we know that it is exaclty the ACTIVE_CONTAINER
@@ -516,7 +519,7 @@ void list_item_add(List* list, const char* line, ...) {
 */
 
 // add a char at the given position
-void _textinput_add_char(TextInput* input, int position, int c) {
+void _textinput_add_char(TextInput* input, int position, unsigned int c) {
   if (input == NULL) return;
   if (position > input->content_size || position >= sizeof(input->content) - 1 || position < 0) return;
 
@@ -543,7 +546,7 @@ void _textinput_remove_char(TextInput* input, int position) {
 }
 
 // the default behavior of the text input
-void _textinput_default_actions(void* context, int c) {
+void _textinput_default_actions(void* context, unsigned int c) {
   if (context == NULL) return;
 
   TextInput* input = (TextInput*)context;
@@ -842,7 +845,7 @@ char* _textarea_get_printable_content(TextArea* textarea, int file_line_index) {
 }
 
 // Handle adding a char to the text
-void _textarea_add_char(TextArea* textarea, int c) {
+void _textarea_add_char(TextArea* textarea, unsigned int c) {
   if (textarea == NULL) return;
 
   // calculate the current lien length
@@ -939,7 +942,7 @@ void _textarea_remove_left_char(TextArea* textarea) {
 }
 
 // Default behavior of the TextArea
-void _textarea_actions(void* context, int c) {
+void _textarea_actions(void* context, unsigned int c) {
   TextArea* textarea = (TextArea*)context;
   if (textarea == NULL) return;
 
@@ -968,7 +971,7 @@ void _textarea_actions(void* context, int c) {
 
     // print the character
     default:
-      if (c >= 32 && c <= 126 && textarea->disabled == FALSE) {
+      if ((c >= 32 && c <= 126 || c >= 128 && c <= 254) && textarea->disabled == FALSE) {
         _textarea_add_char(textarea, c);
       }
       break;
