@@ -10,8 +10,7 @@
 
 /**
  * Colors ----------------------------------------------------------------------------
- */
-
+*/
 static int global_color_pair_counter = 1;
 static int global_color_id_counter = 16; // avoid overwritting the default colors
 
@@ -36,7 +35,7 @@ int _register_hex_color(int color_id, const char* hex_str) {
 
 /**
  * Starting and Ending ---------------------------------------------------------------
- */
+*/
 
 // Start app
 Application* potatui_init() {
@@ -127,7 +126,7 @@ int ctrl(int c) {
 
 /**
  * Containers ------------------------------------------------------------------------
- */
+*/
 
 // Initialize a container inside a parent
 // Obj is a component based on Container
@@ -289,7 +288,7 @@ void container_apply_style(void* con) {
 
 /**
  * Buttons -----------------------------------------------------------------------------------------------------------
- */
+*/
 
 // Creates a new button instance
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
@@ -354,7 +353,7 @@ void button_select(Application* app, Container* btn) {
 
 /**
  * Lists ------------------------------------------------------------------------------------------------------------
- */
+*/
 
 // render the list component
 void list_render(List* list) {
