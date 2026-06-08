@@ -758,6 +758,67 @@ void textarea_handle_key_left(TextArea *textarea) {
   }
 }
 
+// Handles the textarea content after pressing the ENTER key
+void textarea_handle_key_enter(TextArea* textarea) {
+  if (textarea == NULL) return;
+
+  // the original size of the line
+  int current_len = strlen(textarea->lines[textarea->cursor_row]);
+  
+  // the size of the line created
+  int new_line_size = current_len - textarea->cursor_col;
+
+  // the state of the original line after pressing ENTER (breaking the line)
+  char* new_line = (char*)malloc((new_line_size + 1) * sizeof(char));
+  if (new_line == NULL) exit(1);
+
+  // copy the content for the new line
+  strcpy(new_line, textarea->lines[textarea->cursor_row] + textarea->cursor_col);
+
+  // updates the current line
+  textarea->lines[textarea->cursor_row][textarea->cursor_col] = '\0';
+  
+  // free the unused memory from the original line
+  char* shrunk_line = (char*)realloc(textarea->lines[textarea->cursor_row], (textarea->cursor_col + 1) * sizeof(char));
+  if (shrunk_line != NULL) {
+    textarea->lines[textarea->cursor_row] = shrunk_line;
+  }
+
+  // make sure there is enough space for a new line
+  // NOTE: this conditional is block possibly capable of being separated into a dedicated function,
+  // since it is used also in textarea_add_line.
+  if (textarea->total_lines >= textarea->lines_capacity) {
+    // start with capacity for 8 lines
+    int new_capacity = (textarea->lines_capacity == 0) ? 8 : textarea->lines_capacity * 2;
+
+    char** temp_lines = (char**)realloc(textarea->lines, new_capacity * sizeof(char*));
+    if (temp_lines == NULL) exit(1);
+
+    textarea->lines = temp_lines;
+    textarea->lines_capacity = new_capacity;
+  }
+
+  // copy each line until we find the new line position
+  for (int i = textarea->total_lines; i > textarea->cursor_row + 1; i--) {
+    textarea->lines[i] = textarea->lines[i - 1];
+  }
+
+  // insert the new line
+  textarea->lines[textarea->cursor_row + 1] = new_line;
+
+  // update textarea state
+  textarea->cursor_row++;
+  textarea->total_lines++;
+  textarea->cursor_col = 0; // start of the line
+  textarea->scroll_col = 0; // reset scroll
+
+  // update vertical scroll if necessary
+  int max_visible_lines = _textarea_get_max_visible_lines(textarea);
+  if (textarea->cursor_row >= textarea->scroll_row + max_visible_lines) {
+    textarea->scroll_row++;
+  }
+}
+
 //
 // When scrolling to the right, if the scroll_col for bigger than this line, the printer will print from
 // memory addressess after the string, this prevents that from happening, by giving " " (space) to the printer
@@ -886,6 +947,7 @@ void _textarea_actions(void* context, int c) {
     case KEY_UP: textarea_handle_key_up(textarea); break; // move cursor UP
     case KEY_RIGHT: textarea_handle_key_right(textarea, usable_width); break; // move cursor RIGHT
     case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
+    case 10: case KEY_ENTER: textarea_handle_key_enter(textarea); break; // when pressing ENTER
 
     case KEY_BACKSPACE:
       if (textarea->disabled == FALSE) {
