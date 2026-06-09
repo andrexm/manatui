@@ -1162,9 +1162,9 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->total_lines = 0;
   textarea->lines_capacity = 0;
   textarea->cursor_row = 0;
-  textarea->cursor_col = FALSE;
+  textarea->cursor_col = 0;
   textarea->scroll_row = 0;
-  textarea->scroll_col = FALSE;
+  textarea->scroll_col = 0;
   textarea->disabled = FALSE;
   textarea->show_line_numbers = FALSE;
   textarea->line_number_width = 2;
@@ -1191,9 +1191,17 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   wnoutrefresh(textarea->base.dwin);
   doupdate();
 
-  int initial_y = textarea->cursor_row + 1;
-  int initial_x = textarea->line_number_width + 2 + textarea->cursor_col;
+  int initial_y = 1;
+  int initial_x = 1;
+
+  // if line numbers are enabled, account for them too
+  if (textarea->show_line_numbers) {
+    initial_x += textarea->line_number_width + 1; // we add +1 to account for the space after the numbers
+  }
+
   wmove(textarea->base.dwin, initial_y, initial_x);
+  wnoutrefresh(textarea->base.dwin);
+  doupdate();
 
   return textarea;
 }
