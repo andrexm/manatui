@@ -1187,10 +1187,6 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   container_init(textarea);
   container_update(textarea);
 
-  wmove(textarea->base.dwin, 1, 1);
-  wnoutrefresh(textarea->base.dwin);
-  doupdate();
-
   int initial_y = 1;
   int initial_x = 1;
 
