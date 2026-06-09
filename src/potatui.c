@@ -206,17 +206,26 @@ void vcontainer_print(Container* con, bool break_line, int y, int x, const char*
       continue;
     }
 
+    // veriry continuation bits
+    bool is_continuation_byte = (buffer[i] & 0xC0) == 0x80;
+    
     // jump to next line if we find a right border
-    if (cur_x == max_x) {
-      cur_y++;
-      cur_x = 1;
-      if (cur_y >= max_y) break;
-      wmove(con->dwin, cur_y, cur_x);
+    if (!is_continuation_byte) {
+      if (cur_x == max_x) {
+        cur_y++;
+        cur_x = 1;
+        if (cur_y >= max_y) break;
+        wmove(con->dwin, cur_y, cur_x);
+      }
     }
 
     // Draw the character and advance to the next column
-    waddch(con->dwin, buffer[i]);
-    cur_x++;
+    //waddch(con->dwin, buffer[i]);
+    wprintw(con->dwin, "%c", buffer[i]);
+
+    if (!is_continuation_byte) {
+      cur_x++;
+    }
   }
 
   // 6. Freeing the memory
@@ -677,6 +686,21 @@ int _textarea_get_usable_width(TextArea* textarea) {
   return usable_width;
 }
 
+// Handles extended ASCII characters, by ignoring "virtual" characters from UTF-8
+int _textarea_get_visual_distance(const char* str, int start_byte, int end_byte) {
+  if (str == NULL) return 0;
+
+  int visual_width = 0;
+  for (int i = start_byte; i < end_byte; i++) {
+    if (str[i] == '\0') break;
+    // if it's not a continuation byte (10xxxxxx), acts a real visual char on the screen
+    if ((str[i] & 0xC0) != 0x80) {
+      visual_width++;
+    }
+  }
+  return visual_width;
+}
+
 // Handles cursor position and text scroll after KEY_DOWN is pressed
 void textarea_handle_key_down(TextArea* textarea, int max_visible_lines) { 
   if (textarea->total_lines - 1 > textarea->cursor_row) {
@@ -728,7 +752,9 @@ void textarea_handle_key_right(TextArea* textarea, int usable_width) {
   int current_line_len = strlen(textarea->lines[textarea->cursor_row]);
     
   if (textarea->cursor_col < current_line_len) {
-    textarea->cursor_col++;
+    do {
+      textarea->cursor_col++;
+    } while (textarea->cursor_col < current_line_len && (textarea->lines[textarea->cursor_row][textarea->cursor_col] & 0xC0) == 0x80);
 
     // scroll to the right
     if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
@@ -752,7 +778,9 @@ void textarea_handle_key_right(TextArea* textarea, int usable_width) {
 // Handles cursor position and text scroll after KEY_LEFT is pressed
 void textarea_handle_key_left(TextArea *textarea) {
   if (textarea->cursor_col > 0) {
-    textarea->cursor_col--;
+    do {
+      textarea->cursor_col--;
+    } while (textarea->cursor_col > 0 && (textarea->lines[textarea->cursor_row][textarea->cursor_col] & 0xC0) == 0x80);
 
     // scroll to the left
     if (textarea->cursor_col < textarea->scroll_col) {
@@ -888,17 +916,35 @@ void _textarea_remove_left_char(TextArea* textarea) {
     int line_len = strlen(textarea->lines[textarea->cursor_row]);
     char* current_line = textarea->lines[textarea->cursor_row];
 
-    // move characters from right to left, overwitting the target
-    for (int i = textarea->cursor_col; i < line_len; i++) {
-      current_line[i - 1] = current_line[i];
+    // get how many characters are at the left of the cursor
+    int bytes_to_delete = 1;
+    while (textarea->cursor_col - bytes_to_delete > 0) {
+      if ((current_line[textarea->cursor_col - bytes_to_delete] & 0xC0) == 0x80) {
+        bytes_to_delete++;
+      } else {
+        break; // yee the main byte
+      }
     }
-    current_line[line_len - 1] = '\0';
-    textarea->cursor_col--; // update cursor
+
+    // move characters from right to left, overwitting the target
+    for (int i = textarea->cursor_col; i <= line_len; i++) {
+      current_line[i - bytes_to_delete] = current_line[i];
+    }
+
+    textarea->cursor_col -= bytes_to_delete; // update cursor
 
     // update scroll if the cursor is at a position before the visible area
     if (textarea->cursor_col < textarea->scroll_col) {
       textarea->scroll_col = textarea->cursor_col;
     }
+
+    // ensures visual representation is cleaned up
+    // this is really important!
+    int new_len = strlen(current_line);
+    for (int i = new_len; i < line_len; i++) {
+      current_line[i] = '\0';
+    }
+
     return;
   }
 
@@ -997,16 +1043,44 @@ void _textarea_actions(void* context, unsigned int c) {
         );
       }
       
+      char* content = _textarea_get_printable_content(textarea, file_line_index);
+
+      // calculate the exact limit of bytes to avoid breaking UTF-8 chars visually
+      int byte_limit = 0;
+      int visual_count = 0;
+      while (content[byte_limit] != '\0' && visual_count < usable_width) {
+        // if it is not a continuation byte, add 1 to the visual_count
+        if ((content[byte_limit] & 0xC0) != 0x80) {
+          visual_count++;
+        }
+        byte_limit++;
+      }
+  
+      // print the visible text
       container_print(
         (Container*)textarea,
         FALSE,
         screen_row,
         textarea->line_number_width + 2,
-        "%-*.*s",
-        usable_width,
-        usable_width,
-        _textarea_get_printable_content(textarea, file_line_index)
+        "%.*s",
+        byte_limit,
+        content
       );
+
+      // manually add empty spaces to the rest of the line to remove "virtual" characters
+      // because C functions are a nightmare to handle this
+      int spaces_to_fill = usable_width - visual_count;
+      if (spaces_to_fill > 0) {
+        container_print(
+          (Container*)textarea,
+          FALSE,
+          screen_row,
+          textarea->line_number_width + visual_count + 2,
+          "%*s",
+          spaces_to_fill,
+          ""
+        );
+      }
 
       // if we have the content specific color active
       if (textarea->content_color != NULL) {
@@ -1026,7 +1100,7 @@ void _textarea_actions(void* context, unsigned int c) {
         FALSE,
         screen_row,
         textarea->line_number_width + 2,
-        "%-*s",
+        "%*s",
         usable_width,
         ""
       );
@@ -1036,13 +1110,19 @@ void _textarea_actions(void* context, unsigned int c) {
         mvwprintw(textarea->base.dwin, screen_row, 1, "%*s", textarea->line_number_width, "");
       }
     }
-
-
   }
 
   // update cursor
   int visual_y = textarea->cursor_row - textarea->scroll_row + 1;
-  int visual_x = textarea->line_number_width + textarea->cursor_col - textarea->scroll_col + 2; 
+
+  // count real characters instead of pure bytes LOL
+  int visual_distance = _textarea_get_visual_distance(
+    textarea->lines[textarea->cursor_row],
+    textarea->scroll_col,
+    textarea->cursor_col
+  );
+  int visual_x = textarea->line_number_width + visual_distance + 2; 
+
   wmove(textarea->base.dwin, visual_y, visual_x);
 
   // update screen buffers
