@@ -752,8 +752,10 @@ void textarea_handle_key_up(TextArea* textarea) {
 }
 
 // Handles cursor position and text scroll after KEY_RIGHT is pressed
-void textarea_handle_key_right(TextArea* textarea, int usable_width) {
+void textarea_handle_key_right(TextArea* textarea) {
   int current_line_len = strlen(textarea->lines[textarea->cursor_row]);
+
+  int usable_width = _textarea_get_usable_width(textarea);
     
   if (textarea->cursor_col < current_line_len) {
     do {
@@ -1024,7 +1026,7 @@ void _textarea_actions(void* context, unsigned int c) {
   switch (c) {
     case KEY_DOWN: textarea_handle_key_down(textarea, max_visible_lines); break; // move cursor DOWN
     case KEY_UP: textarea_handle_key_up(textarea); break; // move cursor UP
-    case KEY_RIGHT: textarea_handle_key_right(textarea, usable_width); break; // move cursor RIGHT
+    case KEY_RIGHT: textarea_handle_key_right(textarea); break; // move cursor RIGHT
     case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
     case 10: case KEY_ENTER: textarea_handle_key_enter(textarea); break; // when pressing ENTER
 
