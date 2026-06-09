@@ -736,8 +736,12 @@ void textarea_handle_key_up(TextArea* textarea) {
     }
 
     // fix the cursor visibility if the new line is very short
+    int usable_width = _textarea_get_usable_width(textarea);
     if (textarea->cursor_col < textarea->scroll_col) {
-      textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : textarea->cursor_col;
+      textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : 0;
+    }
+    else if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
+      textarea->scroll_col = textarea->cursor_col - usable_width + 1;
     }
 
     // returns the text scroll back if necessary
@@ -790,11 +794,26 @@ void textarea_handle_key_left(TextArea *textarea) {
     // move the cursor to the end of the line above
     if (textarea->cursor_row > 0) {
       textarea->cursor_row--;
-      textarea->cursor_col = strlen(textarea->lines[textarea->cursor_row]) - 1;
+      textarea->cursor_col = strlen(textarea->lines[textarea->cursor_row]);
 
-      int visible_area = textarea->base.width - 3 - textarea->line_number_width;
-      if (strlen(textarea->lines[textarea->cursor_row]) > visible_area) {
-        textarea->scroll_col = strlen(textarea->lines[textarea->cursor_row]) - (visible_area);
+      // adjust scroll position when moving to previous line
+      int usable_width = _textarea_get_usable_width(textarea);
+      int max_visible_lines = _textarea_get_max_visible_lines(textarea);
+
+      // calculate where the cursor should be visually
+      if (textarea->cursor_col > usable_width) {
+        textarea->scroll_col = textarea->cursor_col - usable_width;
+      } else {
+        textarea->scroll_col = 0;
+      }
+
+      // ensure the cursor row is visible
+      if (textarea->cursor_row < textarea->scroll_row) {
+        textarea->scroll_row = textarea->cursor_row;
+      }
+      // check if we need to scroll up when cursor_row is at the top of the visible area
+      else if (textarea->cursor_row >= textarea->scroll_row + max_visible_lines) {
+        textarea->scroll_row = textarea->cursor_row - max_visible_lines + 1;
       }
     }
   }
