@@ -680,7 +680,7 @@ int _textarea_get_max_visible_lines(TextArea* textarea) {
   return max_visible_lines;
 }
 
-int _textarea_get_usable_width(TextArea* textarea) {
+int textarea_get_usable_width(TextArea* textarea) {
   int usable_width = textarea->base.width - textarea->line_number_width - 3;
   if (usable_width < 1) usable_width = 1;
   return usable_width;
@@ -736,7 +736,7 @@ void textarea_handle_key_up(TextArea* textarea) {
     }
 
     // fix the cursor visibility if the new line is very short
-    int usable_width = _textarea_get_usable_width(textarea);
+    int usable_width = textarea_get_usable_width(textarea);
     if (textarea->cursor_col < textarea->scroll_col) {
       textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : 0;
     }
@@ -755,7 +755,7 @@ void textarea_handle_key_up(TextArea* textarea) {
 void textarea_handle_key_right(TextArea* textarea) {
   int current_line_len = strlen(textarea->lines[textarea->cursor_row]);
 
-  int usable_width = _textarea_get_usable_width(textarea);
+  int usable_width = textarea_get_usable_width(textarea);
     
   if (textarea->cursor_col < current_line_len) {
     do {
@@ -799,7 +799,7 @@ void textarea_handle_key_left(TextArea *textarea) {
       textarea->cursor_col = strlen(textarea->lines[textarea->cursor_row]);
 
       // adjust scroll position when moving to previous line
-      int usable_width = _textarea_get_usable_width(textarea);
+      int usable_width = textarea_get_usable_width(textarea);
       int max_visible_lines = _textarea_get_max_visible_lines(textarea);
 
       // calculate where the cursor should be visually
@@ -916,7 +916,7 @@ void _textarea_add_char(TextArea* textarea, unsigned int c) {
   textarea->cursor_col++;
 
   // adjust scroll
-  int usable_width = _textarea_get_usable_width(textarea);
+  int usable_width = textarea_get_usable_width(textarea);
   if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
     textarea->scroll_col = textarea->cursor_col - usable_width + 1;
   }
@@ -999,7 +999,7 @@ void _textarea_remove_left_char(TextArea* textarea) {
     textarea->scroll_row = textarea->cursor_row;
   }
 
-  int usable_width = _textarea_get_usable_width(textarea);
+  int usable_width = textarea_get_usable_width(textarea);
   if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
     textarea->scroll_col = textarea->cursor_col - usable_width + 1;
   }
@@ -1016,7 +1016,7 @@ void _textarea_actions(void* context, unsigned int c) {
   curs_set(0);
 
   int max_visible_lines = _textarea_get_max_visible_lines(textarea);
-  int usable_width = _textarea_get_usable_width(textarea);
+  int usable_width = textarea_get_usable_width(textarea);
 
   // fix line number width
   if (textarea->line_number_width == 0) {
