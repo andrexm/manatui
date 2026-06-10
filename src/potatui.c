@@ -29,7 +29,7 @@ int _register_hex_color(int color_id, const char* hex_str) {
   short ncurses_g = (short)((g * 1000) / 255);
   short ncurses_b = (short)((b * 1000) / 255);
 
-  init_color(color_id, ncurses_r, ncurses_g, ncurses_b);
+  if (init_color(color_id, ncurses_r, ncurses_g, ncurses_b) != OK) return -1;
   return 0;
 }
 
