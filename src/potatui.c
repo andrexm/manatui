@@ -367,6 +367,26 @@ void button_select(Application* app, Container* btn) {
  * Lists ------------------------------------------------------------------------------------------------------------
 */
 
+// Select an item at the given position
+void list_item_select(List *list, const int position) {
+  if (list == NULL) return;
+  if (position < 0 || position >= list->items) return;
+
+  list->selected = position;
+
+  // adjust scroll to make the selected item visible
+  int visible_height = list->base.height - 2;
+  if (list->selected < list->scroll_top) {
+    list->scroll_top = list->selected;
+  }
+  if (list->selected >= list->scroll_top + visible_height) {
+    list->scroll_top = list->selected - visible_height + 1;
+  }
+
+  // update list
+  list_render(list);
+}
+
 // render the list component
 void list_render(List* list) {
   if (list == NULL || list->base.dwin == NULL) return;
@@ -426,16 +446,11 @@ void _list_actions(void* context, unsigned int c) {
   // handle arrow keys
   switch (c) {
     case KEY_DOWN:
-      if (list->selected < list->items - 1) {
-        list->selected++;
-      }
-      // list_item_select(list, position);
+      list_item_select(list, list->selected + 1); // select next item
       break;
 
     case KEY_UP:
-      if (list->selected > 0) {
-        list->selected--;
-      }
+      list_item_select(list, list->selected - 1); // select previous item
       break;
   }
 
