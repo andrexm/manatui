@@ -887,7 +887,10 @@ void textarea_handle_key_enter(TextArea* textarea) {
 // memory addressess after the string, this prevents that from happening, by giving " " (space) to the printer
 // 
 char* _textarea_get_printable_content(TextArea* textarea, int file_line_index) {
-  char* content = (textarea->scroll_col <= strlen(textarea->lines[file_line_index]))
+  if (textarea == NULL || textarea->lines == NULL || textarea->lines[file_line_index] == NULL) return " ";
+
+  int line_len = strlen(textarea->lines[file_line_index]);
+  char* content = (textarea->scroll_col <= line_len)
                   ? &textarea->lines[file_line_index][textarea->scroll_col]
                   : " ";
   return content;
