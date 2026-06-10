@@ -321,6 +321,11 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
 
   container_init(btn);
 
+  if (strlen(label) >= sizeof(btn->label)) {
+    // truncate
+    strncpy(btn->label, label, sizeof(btn->label) - 1);
+    btn->label[sizeof(btn->label) - 1] = '\0';
+  }
   snprintf(btn->label, sizeof(btn->label), "%s", label);
   container_update(btn);
 
