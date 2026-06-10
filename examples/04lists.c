@@ -5,13 +5,13 @@ void list_focus(int c, void* con) {
   List* list = (List*)con;
 
   // handle 'j' key - go down
-  if (c == 'j' && list->selected < list->items - 1) {
-    list->selected++;
+  if (c == 'j') {
+    list_item_select(list, list->selected + 1);
   }
 
   // handle 'k' key - go up
-  if (c == 'k' && list->selected > 0) {
-    list->selected--;
+  if (c == 'k') {
+    list_item_select(list, list->selected - 1);
   }
 
   // handle the ENTER key
