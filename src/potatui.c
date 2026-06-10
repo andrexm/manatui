@@ -291,9 +291,12 @@ void container_apply_style(void* con) {
     _register_hex_color(fg_id, container->foreground);
     _register_hex_color(bg_id, container->background);
 
-    // init color pair
-    init_pair(pair_id, fg_id, bg_id);
-    container->color_pair_id = pair_id;
+    // init color pair if it succeeds
+    if (init_pair(pair_id, fg_id, bg_id) == OK) {
+      container->color_pair_id = pair_id;
+    } else {
+      container->color_pair_id = -1;
+    }
   }
 }
 
