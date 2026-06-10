@@ -489,7 +489,7 @@ void _list_content_add(List* list, const char* line) {
   if (new_content == NULL) exit(1);
 
   list->content = new_content;
-  list->content[list->items - 1] = (char*)line;
+  list->content[list->items - 1] = strdup(line); // make a copy of the string instead of storing the pointer directly
 }
 
 // add a new item to the list
