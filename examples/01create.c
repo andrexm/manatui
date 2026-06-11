@@ -10,6 +10,6 @@ int main() {
   refresh();
   getch();
   
-  potatui_end();
+  potatui_end(app);
   return 0;
 }

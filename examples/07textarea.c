@@ -61,5 +61,5 @@ int main() {
 
   // finish the app
   textarea_destroy(textarea);
-  potatui_end();
+  potatui_end(app);
 }

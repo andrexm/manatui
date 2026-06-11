@@ -62,6 +62,6 @@ int main() {
   potatui_loop(app);
 
   // Finish the program
-  potatui_end();
+  potatui_end(app);
   return 0;
 }

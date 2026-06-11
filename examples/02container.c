@@ -34,6 +34,6 @@ int main() {
 
   getch(); // wait for a keypress
   
-  potatui_end(); // finish the app
+  potatui_end(app); // finish the app
   return 0;
 }

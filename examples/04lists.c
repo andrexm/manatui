@@ -49,6 +49,6 @@ int main() {
 
   potatui_loop(app);
 
-  potatui_end();
+  potatui_end(app);
   return 0;
 }
