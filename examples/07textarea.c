@@ -6,9 +6,7 @@ typedef struct {
   TextArea* textarea;
 } Context;
 
-// remove this
-// remove skip_current_iteration
-// NOTE: add handle disabled in the textarea_actions OR call this funtion at the end of it! (better)
+// activated when the textarea has focus - in this example, the entire time
 void handle_my_textarea(int c, void* context) {
   if (context == NULL) return;
   TextArea* textarea = (TextArea*)context;
