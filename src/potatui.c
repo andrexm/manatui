@@ -1393,7 +1393,7 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
 // Init colors specific to the textarea.
 // For now, the only extra color is for the content inside the textarea.
 void  _textarea_init_content_style(TextArea* textarea) {
-  if (textarea == NULL || !has_colors()) return;
+  if (textarea == NULL || textarea->content_color == NULL || textarea->base.background == NULL || !has_colors()) return;
 
   int fg_id = global_color_id_counter++;
   int bg_id = global_color_id_counter++;
