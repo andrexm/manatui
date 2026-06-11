@@ -8,6 +8,13 @@
 
 #define MAX_CONTAINERS 50
 
+// List of objects to be freed at the end (at potatui_end())
+typedef struct {
+  void** pointers;
+  int capacity;
+  int total;
+} DeferFreeList;
+
 // Container - the base for all other components
 typedef struct {
   // dimensions of the Derwin
@@ -40,6 +47,7 @@ typedef struct {
   Container* container_list[MAX_CONTAINERS]; // a list for focusable containers
   Container* focused_container;
   int total_containers; // the amount of focused containers
+  DeferFreeList* defer_list;
 } Application;
 
 // Button type
@@ -99,8 +107,9 @@ void app_add_container(Application* app, Container* con);
 void app_focus_on(Application* app, void* con);
 void app_key_handle(Application* app, unsigned int c);
 void potatui_loop(Application* app);
-void potatui_end();
+void potatui_end(Application* app);
 unsigned int ctrl(unsigned int c);
+void app_defer_free(Application* app, void* ptr);
 
 /**
  * Containers ----------------------------------------------------------------
