@@ -27,35 +27,15 @@ int main() {
 
   // add some lines to the textarea
   textarea_add_line(textarea, "This is the first line! This text continues until where I want it to stop. Maybe here, or here.");
-
   textarea_add_line(textarea, "Line 01.");
   textarea_add_line(textarea, "Line 02.");
   textarea_add_line(textarea, "Line 03.");
   textarea_add_line(textarea, "Line 04.");
   textarea_add_line(textarea, "Line 05.");
-  textarea_add_line(textarea, "Line 06.");
-  textarea_add_line(textarea, "Line 07.");
-  textarea_add_line(textarea, "Line 08.");
-  textarea_add_line(textarea, "Line 09.");
-  textarea_add_line(textarea, "Line 10.");
-  textarea_add_line(textarea, "Line 11.");
-  textarea_add_line(textarea, "Line 12.");
-  textarea_add_line(textarea, "Line 13.");
-  textarea_add_line(textarea, "Line 14.");
-  textarea_add_line(textarea, "Line 15.");
-  textarea_add_line(textarea, "Line 16.");
-  textarea_add_line(textarea, "Line 17.");
-  textarea_add_line(textarea, "Line 18.");
-  textarea_add_line(textarea, "Line 19.");
-  textarea_add_line(textarea, "Line 20.");
-  textarea_add_line(textarea, "Line 21.");
-  textarea_add_line(textarea, "Line 22.");
-  textarea_add_line(textarea, "Line 23.");
 
-  app_add_container(app, (Container*)textarea);
-  app_focus_on(app, textarea);
-
-  textarea_render(textarea);
+  app_add_container(app, (Container*)textarea); // add to the focusable list
+  app_focus_on(app, textarea); // start focus on it
+  textarea_render(textarea); // draw the textarea
 
   potatui_loop(app);
 
