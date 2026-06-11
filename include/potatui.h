@@ -149,7 +149,7 @@ void textinput_render(TextInput* input);
  * TextArea ------------------------------------------------------------------
 */
 TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
-void textarea_render(TextArea* textarea);
+void textarea_render(Application* app, TextArea* textarea);
 void textarea_add_line(TextArea* textarea, const char* line);
 void textarea_destroy(TextArea* textarea);
 void textarea_handle_key_down(TextArea* textarea, int max_visible_lines);
