@@ -474,6 +474,12 @@ void button_select(Application* app, Container* btn) {
   doupdate();
 }
 
+void button_render(Application* app, Button* button) {
+  if (app == NULL || button == NULL) return;
+
+  app_add_container(app, (Container*)button);
+}
+
 
 /**
  * Lists ------------------------------------------------------------------------------------------------------------
