@@ -1425,13 +1425,32 @@ void  _textarea_init_content_style(TextArea* textarea) {
 }
 
 // Draw the textarea content on screen
-void textarea_render(TextArea *textarea) {
+void textarea_render(Application* app, TextArea *textarea) {
   if (textarea == NULL) return;
 
-  // init specific colors
-  // the content can a different color from the borders
-  _textarea_init_content_style(textarea);
+  // add component to the focusable list
+  app_add_container(app, (Container*)textarea); // add to the focusable list
 
+  // init specific colors
+  // set up foreground and background colors - in the case of textarea, the content color is set separetely if we desire to
+  if (textarea->base.foreground != NULL) {
+    // set default background color to black
+    if (textarea->base.background == NULL) {
+      textarea->base.background = "#000000";
+    }
+    container_apply_style(textarea);
+  }
+
+  // if content color is set
+  if (textarea->content_color != NULL) {
+    // set default background color to black
+    if (textarea->base.background == NULL) {
+      textarea->base.background = "#000000";
+    }
+    _textarea_init_content_style(textarea);
+  }
+
+  // start initial drawing
   _textarea_actions(textarea, 0);
 }
 
