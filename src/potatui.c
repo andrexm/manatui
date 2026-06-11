@@ -75,9 +75,41 @@ void app_focus_on(Application* app, void* con) {
   app->focused_container = (Container*)con;
 }
 
+// register objects to be freed
+void app_defer_free(Application* app, void* ptr) {
+  if (app == NULL || ptr == NULL) return;
+
+  DeferFreeList* list = app->defer_list;
+
+  if (list->total >= list->capacity) {
+    int new_capacity = (list->capacity == 0) ? 16 : list->capacity * 2;
+    void** temp = (void**)realloc(list->pointers, new_capacity * sizeof(void*));
+    if (temp == NULL) {
+      free(ptr);
+      return;
+    }
+    list->pointers = temp;
+    list->capacity = new_capacity;
+  }
+
+  list->pointers[list->total] = ptr;
+  list->total++;
+}
+
 // End ncurses
-void potatui_end() {
+void potatui_end(Application* app) {
   endwin();
+
+  // free all registered objects
+  if (app->defer_list->pointers != NULL) {
+    for (int i = 0; i < app->defer_list->total; i++) {
+      if (app->defer_list->pointers[i] != NULL) {
+        free(app->defer_list->pointers[i]);
+      }
+    }
+    free(app->defer_list->pointers);
+  }
+  free(app);
 }
 
 // Handle all key inputs
@@ -85,7 +117,7 @@ void app_key_handle(Application* app, unsigned int c) {
   if (app == NULL) return;
 
   if (c == ctrl('q')) {
-    potatui_end();
+    potatui_end(app);
     exit(0);
   }
 
