@@ -1355,7 +1355,7 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->scroll_col = 0;
   textarea->disabled = FALSE;
   textarea->show_line_numbers = FALSE;
-  textarea->line_number_width = 2;
+  textarea->line_number_width = 4;
 
   // base container properties
   textarea->base.actions = _textarea_actions;
