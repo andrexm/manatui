@@ -902,7 +902,7 @@ void textarea_handle_key_down(TextArea* textarea, int max_visible_lines) {
     }
 
     // scroll the text if necessary
-    if (textarea->cursor_row >= textarea->scroll_col + max_visible_lines) {
+    if (textarea->cursor_row >= textarea->scroll_row + max_visible_lines) {
       textarea->scroll_row = textarea->cursor_row - max_visible_lines + 1;
     }
   }
