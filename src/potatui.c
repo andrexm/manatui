@@ -550,6 +550,22 @@ void list_item_add(List* list, const char* line, ...) {
  * TextInput -----------------------------------------------------------------
 */
 
+// returns the amount of real characters in an interval
+int _textinput_get_visual_distance(const char* str, int start_byte, int end_byte) {
+  if (str == NULL) return 0;
+
+  int visual_width = 0;
+  for (int i = start_byte; i <= end_byte; i++) {
+    if (str[i] == '\0') break;
+
+    // count as a visual character if it is not a continuation byte
+    if ((str[i] & 0xC0) != 0x80) {
+      visual_width++;
+    }
+  }
+  return visual_width;
+}
+
 // add a char at the given position
 void _textinput_add_char(TextInput* input, int position, unsigned int c) {
   if (input == NULL) return;
@@ -585,24 +601,50 @@ void _textinput_default_actions(void* context, unsigned int c) {
 
   curs_set(0);
 
+  int usable_width = input->base.width - 2;
+
   // navigating through the text
   if (c == KEY_LEFT) {
-    if (input->cursor_pos > 0) input->cursor_pos--;
+    if (input->cursor_pos > 0) {
+      // skip left continuation bytes
+      do {
+        input->cursor_pos--;
+      } while (input->cursor_pos > 0 && (input->content[input->cursor_pos] & 0xC0) == 0x80);
+    }
   }
   else if (c == KEY_RIGHT) {
-    if (input->cursor_pos < input->content_size) input->cursor_pos++;
+    if (input->cursor_pos < input->content_size) {
+      // skip right continuation bytes
+      do {
+        input->cursor_pos++;
+      } while (input->cursor_pos < input->content_size && (input->content[input->cursor_pos] & 0xc0) == 0x80);
+    }
   }
 
-  // removing characters
+  // removing characters (BACKSPACE)
   else if (c == KEY_BACKSPACE || c == 127 || c == 8) {
-    if (input->cursor_pos > 0 && input->disabled == FALSE) {      
-      _textinput_remove_char(input, input->cursor_pos - 1);
-      input->cursor_pos--; // the cursor walks 1 character to the left after removing a char
+    if (input->cursor_pos > 0 && input->disabled == FALSE) {
+      // count how many bytes are in the UTF-8 char at the left side
+      int bytes_to_delete = 1;
+      while (input->cursor_pos - bytes_to_delete > 0) {
+        if ((input->content[input->cursor_pos] & 0xc0) == 0x80) {
+          bytes_to_delete++;
+        } else {
+          break;
+        }
+      }
+
+      // remove all corresponding bytes
+      for (int i = 0; i < bytes_to_delete; i++) {
+        _textinput_remove_char(input, input->cursor_pos - bytes_to_delete);
+      }
+      input->cursor_pos -= bytes_to_delete; // the cursor walks 1 or bytes_to_delete character to the left after removing a char
     }
   }
   
-  // filter usable characters
-  else if (c >= 32 && c <= 126 && input->disabled == FALSE) {
+  // adding characters (typing)
+  // accept ASCII characters between 32-126 and extended UTF-8 chars 128-254
+  else if (((c >= 32 && c <= 126) || (c >= 128 && c<= 254)) && input->disabled == FALSE) {
     _textinput_add_char(input, input->cursor_pos, c);
     input->cursor_pos++; // the cursor advances after typing
   }
@@ -611,26 +653,56 @@ void _textinput_default_actions(void* context, unsigned int c) {
   container_update(input);
 
   // calculate which portion of the text to show and where to position the cursor
-  int usable_width = input->base.width - 2;
-  if (input->content_size < usable_width) {
+  int visual_cursor = _textinput_get_visual_distance(input->content, 0, input->cursor_pos);
+  int visual_text_pos = _textinput_get_visual_distance(input->content, 0, input->text_pos);
+
+  // if the text fits int the input width, resets the scroll
+  int total_visual_chars = _textinput_get_visual_distance(input->content, 0, input->content_size);
+  if (total_visual_chars < usable_width) {
     input->text_pos = 0;
+    visual_text_pos = 0;
   }
   else {
     // the cursor moves beyond the left visible area
-    if (input->cursor_pos < input->text_pos) {
+    if (visual_cursor < visual_text_pos) {
       input->text_pos = input->cursor_pos;
+      visual_text_pos = visual_cursor;
     }
     // the cursor moves beyond the right visible area
-    if (input->cursor_pos >= input->text_pos + usable_width) {
-      input->text_pos = input->cursor_pos - usable_width + 1;
+    if (visual_cursor >= visual_text_pos + usable_width) {
+      while (_textinput_get_visual_distance(input->content, input->text_pos, input->cursor_pos) >= usable_width) {
+        input->text_pos++;
+      }
     }
+    visual_text_pos = _textinput_get_visual_distance(input->content, 0, input->text_pos);
+  }
+
+  //
+  // Compatible Rendering -----------------
+  // 
+  char* printable_content = &input->content[input->text_pos];
+
+  // calculate the number of bytes to print to avoid truncating UTF-8 chars
+  int byte_limit = 0;
+  int visual_count = 0;
+  while (printable_content[byte_limit] != '\0' && visual_count < usable_width) {
+    if ((printable_content[byte_limit] & 0xc0) != 0x80) {
+      visual_count++;
+    }
+    byte_limit++;
+  }
+
+  // print the safe and visible portion of the text
+  container_print((Container*)input, FALSE, 1, 1, "%.*s", byte_limit, printable_content);
+
+  // clear the rest of the visible line (remove trash chars from screen)
+  int spaces_to_fill = usable_width - visual_count;
+  if (spaces_to_fill > 0) {
+    container_print((Container*)input, FALSE, 1, 1 + visual_count, "%*s", spaces_to_fill, "");
   }
 
   // where the cursor visually appears in the input
-  int curs_pos_at_container = input->cursor_pos - input->text_pos;
-
-  // print that portion of text and position the cursor
-  container_print((Container*)input, FALSE, 1, 1, "%-*s", usable_width, &input->content[input->text_pos]);
+  int curs_pos_at_container = visual_cursor - visual_text_pos;
   wmove(input->base.dwin, 1, curs_pos_at_container + 1);
 
   // update
