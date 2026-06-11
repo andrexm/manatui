@@ -1,6 +1,28 @@
 #include "../include/potatui.h"
 #include <ncurses.h>
 
+typedef struct {
+  Application* app;
+  TextArea* textarea;
+} Context;
+
+// remove this
+// remove skip_current_iteration
+// NOTE: add handle disabled in the textarea_actions OR call this funtion at the end of it! (better)
+void handle_my_textarea(int c, void* context) {
+  if (context == NULL) return;
+  TextArea* textarea = (TextArea*)context;
+
+  // handle ESC key
+  if (c == 27) {
+    textarea->disabled = TRUE;
+  }
+  // reactivate the textarea
+  if (textarea->disabled && c == 'i') {
+    textarea->disabled = FALSE;
+  }
+}
+
 int main() {
   Application* app = potatui_init();
 
@@ -15,7 +37,7 @@ int main() {
     start_y, // start Y
     start_x, // start X
     "TextArea", // Title
-    NULL // on focus callback
+    handle_my_textarea // on focus callback
   );
 
   textarea->base.user_data = textarea; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
