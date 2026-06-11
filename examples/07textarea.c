@@ -44,19 +44,13 @@ int main() {
   textarea->base.foreground = "#177458";
   textarea->base.background = "#000000";
   textarea->content_color = "#6b7a73";
-  container_apply_style(textarea);
 
   // add some lines to the textarea
   textarea_add_line(textarea, "This is the first line! This text continues until where I want it to stop. Maybe here, or here.");
-  textarea_add_line(textarea, "Line 01.");
-  textarea_add_line(textarea, "Line 02.");
-  textarea_add_line(textarea, "Line 03.");
-  textarea_add_line(textarea, "Line 04.");
-  textarea_add_line(textarea, "Line 05.");
+  textarea_add_line(textarea, "Another line, try typing something.");
 
-  app_add_container(app, (Container*)textarea); // add to the focusable list
   app_focus_on(app, textarea); // start focus on it
-  textarea_render(textarea); // draw the textarea
+  textarea_render(app, textarea); // draw the textarea
 
   potatui_loop(app);
 
