@@ -57,6 +57,7 @@ Application* potatui_init() {
 
   app->focused_container = NULL;
   app->total_containers = 0;
+  app->skip_current_iteration = FALSE;
 
   return app;
 }
@@ -127,14 +128,14 @@ void app_key_handle(Application* app, unsigned int c) {
       break;
   }
 
-  // handle container focus
-  if (app->focused_container != NULL && app->focused_container->on_focus != NULL) {
-    app->focused_container->on_focus(c, app->focused_container->user_data);
-  }
-
   // handle container default actions (a list handles arrow keys, for example)
   if (app->focused_container != NULL && app->focused_container->actions != NULL) {
     app->focused_container->actions(app->focused_container, c);
+  }
+
+  // handle container focus
+  if (app->focused_container != NULL && app->focused_container->on_focus != NULL) {
+    app->focused_container->on_focus(c, app->focused_container->user_data);
   }
 }
 
@@ -1006,7 +1007,7 @@ void textarea_handle_key_left(TextArea *textarea) {
 
 // Handles the textarea content after pressing the ENTER key
 void textarea_handle_key_enter(TextArea* textarea) {
-  if (textarea == NULL) return;
+  if (textarea == NULL || textarea->disabled) return;
 
   // the original size of the line
   int current_len = strlen(textarea->lines[textarea->cursor_row]);
