@@ -49,9 +49,8 @@ int main() {
   btn = button_create(stdscr, 3, 12, START_Y, START_X, "Cancel", btn_on_focus);
   btn2 = button_create(stdscr, 3, 12, START_Y, START_X + 14, "Proceed", btn_on_focus);
 
-  // Add both buttons to the focusable list
-  app_add_container(app, (Container*)btn);
-  app_add_container(app, (Container*)btn2);
+  button_render(app, btn);
+  button_render(app, btn2);
 
   // You have to focus on something in order to interact with the program.
   // In this case, buttons have the 'button_select' function
