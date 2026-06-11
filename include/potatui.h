@@ -110,6 +110,7 @@ void potatui_loop(Application* app);
 void potatui_end(Application* app);
 unsigned int ctrl(unsigned int c);
 void app_defer_free(Application* app, void* ptr);
+void* app_alloc(Application* app, void* origin, size_t size);
 
 /**
  * Containers ----------------------------------------------------------------

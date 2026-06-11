@@ -153,6 +153,62 @@ void potatui_loop(Application* app) {
   }
 }
 
+// works as malloc or realloc, while registering the new object to the defer free list
+void* app_alloc(Application* app, void* old_ptr, size_t size) {
+  if (app == NULL) return NULL;
+
+  // given a size 0, acts as a free function
+  if (size == 0) {
+    if (old_ptr != NULL) {
+      // remove from the defer list
+      for (int i = 0; i < app->defer_list->total; i++) {
+        // when find the pointer, free and substitute
+        if (app->defer_list->pointers[i] == old_ptr) {
+          app->defer_list->pointers[i] = NULL;
+          break;
+        }
+      }
+      free(old_ptr);
+    }
+    return NULL;
+  }
+
+  // works as malloc if origin is NULL
+  void* new_ptr = (void*)realloc(old_ptr, size);
+  // on fail, end ncurses and clear memory safely
+  if (new_ptr == NULL) {
+    fprintf(stderr, "Critical error: failed allocating memory.\n");
+    potatui_end(app);
+    exit(1);
+  }
+
+  // if the object already exists, find it in the defer free list and substitute the pointer for the new one
+  if (old_ptr != NULL && old_ptr != new_ptr) {
+    bool substituting_success = 0;
+
+    // look for the old pointer in the defer list
+    for (int i = 0; i < app->defer_list->total; i++) {
+      // when find the pointer, free and substitute
+      if (app->defer_list->pointers[i] == old_ptr) {
+        app->defer_list->pointers[i] = new_ptr;
+        substituting_success = TRUE;
+        break;
+      }
+    }
+    // if it was not in the list, then adds it
+    if (!substituting_success) {
+      app_defer_free(app, new_ptr);
+    }
+  }
+
+  // if the object is completely new, just add the realloc resulting pointer to the defer free list
+  else if (old_ptr == NULL) {
+    app_defer_free(app, new_ptr);
+  }
+
+  return new_ptr;
+}
+
 // CTRL + key - doing this as a function helps on portability to other languages
 unsigned int ctrl(unsigned int c) {
   return ((c) & (0x1f));
