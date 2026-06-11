@@ -48,6 +48,7 @@ typedef struct {
   Container* focused_container;
   int total_containers; // the amount of focused containers
   DeferFreeList* defer_list;
+  bool skip_current_iteration;
 } Application;
 
 // Button type
