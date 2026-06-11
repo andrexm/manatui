@@ -20,6 +20,7 @@ int main() {
 
   textarea->base.user_data = textarea;
   textarea->show_line_numbers = TRUE;
+  textarea->line_number_width = 4;
   textarea->base.foreground = "#177458";
   textarea->base.background = "#000000";
   textarea->content_color = "#6b7a73";
