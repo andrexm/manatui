@@ -18,9 +18,9 @@ int main() {
     NULL // on focus callback
   );
 
-  textarea->base.user_data = textarea;
-  textarea->show_line_numbers = TRUE;
-  textarea->line_number_width = 4;
+  textarea->base.user_data = textarea; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
+  textarea->show_line_numbers = TRUE; // show the column of numbers
+  textarea->line_number_width = 4; // opitional: set up the width of the column of numbers
   textarea->base.foreground = "#177458";
   textarea->base.background = "#000000";
   textarea->content_color = "#6b7a73";
