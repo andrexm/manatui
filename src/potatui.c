@@ -57,7 +57,6 @@ Application* potatui_init() {
 
   app->focused_container = NULL;
   app->total_containers = 0;
-  app->skip_current_iteration = FALSE;
 
   return app;
 }
@@ -76,12 +75,27 @@ void app_focus_on(Application* app, void* con) {
   app->focused_container = (Container*)con;
 }
 
-// register objects to be freed
+// register objects to be freed at the end of the app (potatui_end)
 void app_defer_free(Application* app, void* ptr) {
   if (app == NULL || ptr == NULL) return;
 
-  DeferFreeList* list = app->defer_list;
+  DeferFreeList* list = NULL;
+  // if the defer list was never created, then create it now
+  if (app->defer_list == NULL) {
+    DeferFreeList* temp_list = (DeferFreeList*)malloc(sizeof(DeferFreeList));
+    if (temp_list == NULL) {
+      fprintf(stderr, "Failed to allocate memory for App Defer List.\n");
+      exit(1);
+    }
+    // success on allocating memory for the defer list
+    app->defer_list = temp_list;
+    app->defer_list->capacity = 0;
+    app->defer_list->pointers = NULL;
+    app->defer_list->total = 0;
+  }
+  list = app->defer_list;
 
+  // request memory for the defer list if necessary
   if (list->total >= list->capacity) {
     int new_capacity = (list->capacity == 0) ? 16 : list->capacity * 2;
     void** temp = (void**)realloc(list->pointers, new_capacity * sizeof(void*));
@@ -93,6 +107,7 @@ void app_defer_free(Application* app, void* ptr) {
     list->capacity = new_capacity;
   }
 
+  // add a new pointer (ptr) to the defer list
   list->pointers[list->total] = ptr;
   list->total++;
 }
