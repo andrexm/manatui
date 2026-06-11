@@ -127,6 +127,7 @@ void container_apply_style(void* con);
 */
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
 void button_select(Application* app, Container* btn);
+void button_render(Application* app, Button* button);
 
 /**
  * Lists ---------------------------------------------------------------------
