@@ -1,4 +1,4 @@
-#include "../include/manatui.h"
+#include "../manatui.h"
 #include <ncurses.h>
 
 int main() {

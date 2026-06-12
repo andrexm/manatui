@@ -1,4 +1,4 @@
-#include "../include/manatui.h"
+#include "../manatui.h"
 #include <ncurses.h>
 
 void on_focus(int c, void* context) {

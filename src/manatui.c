@@ -7,7 +7,7 @@
 #include <string.h>
 #include <locale.h>
 
-#include "../include/manatui.h"
+#include "../manatui.h"
 
 
 /**
