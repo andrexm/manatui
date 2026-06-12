@@ -148,14 +148,14 @@ void app_key_handle(Application* app, unsigned int c) {
       break;
   }
 
-  // handle container default actions (a list handles arrow keys, for example)
-  if (app->focused_container != NULL && app->focused_container->actions != NULL) {
-    app->focused_container->actions(app->focused_container, c);
-  }
-
   // handle container focus
   if (app->focused_container != NULL && app->focused_container->on_focus != NULL) {
     app->focused_container->on_focus(c, app->focused_container->user_data);
+  }
+
+  // handle container default actions (a list handles arrow keys, for example)
+  if (app->focused_container != NULL && app->focused_container->actions != NULL) {
+    app->focused_container->actions(app->focused_container, c);
   }
 }
 
