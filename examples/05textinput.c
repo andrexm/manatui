@@ -1,6 +1,5 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
-#include <stdlib.h>
 #include <string.h>
 
 // This type will help on giving visibility of our components to the input_on_focus - the function we created here to handle each input focus state
@@ -27,7 +26,7 @@ void input_on_focus(int c, void* user_data) {
 }
 
 int main() {
-  Application* app = potatui_init();
+  Application* app = manatui_init();
 
   int width = 40;
   int start_x = (COLS / 2) - (width / 2);
@@ -38,14 +37,11 @@ int main() {
   // create an input and disable it
   TextInput* disabled_input = textinput_create(stdscr, width, 6, start_x, "Disabled Input", input_on_focus);
   disabled_input->disabled = TRUE;
-
   char* str = "this is an example to show the behavior of disabled inputs!";
-  memcpy(disabled_input->content, str, strlen(str));
-  disabled_input->content_size = strlen(str);
-  textinput_render(disabled_input);
+  textinput_set(disabled_input, str); // add str as the disabled input content
+  textinput_render(app, disabled_input);
 
-  InputContext* context = (InputContext*)malloc(sizeof(InputContext));
-  if (context == NULL) exit(1);
+  InputContext* context = (InputContext*)app_alloc(app, NULL, sizeof(InputContext));
   context->disabled_input = disabled_input;
   context->input = input;
   context->app = app;
@@ -53,13 +49,13 @@ int main() {
   disabled_input->base.user_data = context;
   input->base.user_data = context;
 
-  app_add_container(app, (Container*)input);
-  app_add_container(app, (Container*)disabled_input);
+  textinput_render(app, input);
+  textinput_render(app, disabled_input);
 
   app_focus_on(app, input); // start focusing on the enabled input
 
-  potatui_loop(app);
+  manatui_loop(app);
 
-  potatui_end(app);
+  manatui_end(app);
   return 0;
 }

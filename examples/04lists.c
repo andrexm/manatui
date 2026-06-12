@@ -1,4 +1,4 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
 
 void list_focus(int c, void* con) {
@@ -22,7 +22,7 @@ void list_focus(int c, void* con) {
 
 int main() {
   //start application
-  Application* app = potatui_init();
+  Application* app = manatui_init();
 
   List* list = list_create(stdscr, 8, 50, 2, 2, "Languages", TRUE, list_focus);
   list->base.user_data = list; // add the list itself to the list_focus context
@@ -47,8 +47,8 @@ int main() {
   app_add_container(app, (Container*)list);
   app_focus_on(app, list); // start focusing on the list
 
-  potatui_loop(app);
+  manatui_loop(app);
 
-  potatui_end(app);
+  manatui_end(app);
   return 0;
 }

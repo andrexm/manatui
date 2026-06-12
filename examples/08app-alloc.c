@@ -1,11 +1,11 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
 
 int main() {
-  Application* app = potatui_init();
+  Application* app = manatui_init();
 
   // app_alloc substitutes malloc and realloc, of course, by working with reallo under the hood.
-  // the reason to have this function is to automatically free the object when potatui_end() is called.
+  // the reason to have this function is to automatically free the object when manatui_end() is called.
   // also, if the allocation fails, the program will close and you will see a message on stderr.
   char* test_str = (char*)app_alloc(app, NULL, sizeof(char) * 8);
   test_str = "text 01";
@@ -13,5 +13,5 @@ int main() {
 
   wprintw(stdscr, "Press any key to close...");
   getch();
-  potatui_end(app);
+  manatui_end(app);
 }

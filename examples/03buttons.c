@@ -1,4 +1,4 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
 
 const int START_Y = 3;
@@ -31,7 +31,7 @@ void handle_btn2(int c, void* user_data) {
 
 int main() {
   // Start the application
-  app = potatui_init();
+  app = manatui_init();
   mvwprintw(stdscr, 1, COLS / 2 - 12, "Press Ctrl+Q to exit.");
 
   // Create the buttons inside app and initialize
@@ -50,9 +50,9 @@ int main() {
   app_focus_on(app, btn2); 
 
   // Application loop
-  potatui_loop(app);
+  manatui_loop(app);
 
   // Finish the program
-  potatui_end(app);
+  manatui_end(app);
   return 0;
 }

@@ -1,4 +1,4 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
 
 typedef struct {
@@ -20,7 +20,7 @@ void handle_my_textarea(int c, void* context) {
 }
 
 int main() {
-  Application* app = potatui_init();
+  Application* app = manatui_init();
 
   int width = 60;
   int height = 20;
@@ -51,9 +51,9 @@ int main() {
   app_focus_on(app, textarea); // start focus on it
   textarea_render(app, textarea); // draw the textarea
 
-  potatui_loop(app);
+  manatui_loop(app);
 
   // finish the app
   textarea_destroy(textarea);
-  potatui_end(app);
+  manatui_end(app);
 }

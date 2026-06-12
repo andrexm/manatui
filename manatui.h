@@ -16,7 +16,7 @@ typedef enum {
   TYPE_BUTTON
 } ComponentType;
 
-// List of objects to be freed at the end (at potatui_end())
+// List of objects to be freed at the end (at manatui_end())
 typedef struct {
   void** pointers;
   int capacity;
@@ -112,12 +112,12 @@ typedef struct {
 /**
  * Application ---------------------------------------------------------------
 */
-Application* potatui_init();
+Application* manatui_init();
 void app_add_container(Application* app, void* container);
 void app_focus_on(Application* app, void* con);
 void app_key_handle(Application* app, unsigned int c);
-void potatui_loop(Application* app);
-void potatui_end(Application* app);
+void manatui_loop(Application* app);
+void manatui_end(Application* app);
 unsigned int ctrl(unsigned int c);
 void app_defer_free(Application* app, void* ptr);
 void* app_alloc(Application* app, void* origin, size_t size);
@@ -153,7 +153,8 @@ void list_item_select(List* list, const int position);
 */
 // on creating, renamed title to label, height = 3, and has_border is always true
 TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
-void textinput_render(TextInput* input);
+void textinput_render(Application* app, TextInput* input);
+void textinput_set(TextInput* input, const char* str);
 
 
 /**

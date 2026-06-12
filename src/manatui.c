@@ -7,7 +7,7 @@
 #include <string.h>
 #include <locale.h>
 
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 
 
 /**
@@ -40,7 +40,7 @@ int _register_hex_color(int color_id, const char* hex_str) {
 */
 
 // Start app
-Application* potatui_init() {
+Application* manatui_init() {
   setlocale(LC_ALL, "");
   
   initscr();
@@ -80,7 +80,7 @@ void app_focus_on(Application* app, void* con) {
   app->focused_container = (Container*)con;
 }
 
-// register objects to be freed at the end of the app (potatui_end)
+// register objects to be freed at the end of the app (manatui_end)
 void app_defer_free(Application* app, void* ptr) {
   if (app == NULL || ptr == NULL) return;
 
@@ -118,7 +118,7 @@ void app_defer_free(Application* app, void* ptr) {
 }
 
 // End ncurses
-void potatui_end(Application* app) {
+void manatui_end(Application* app) {
   endwin();
 
   // free all registered objects
@@ -138,7 +138,7 @@ void app_key_handle(Application* app, unsigned int c) {
   if (app == NULL) return;
 
   if (c == ctrl('q')) {
-    potatui_end(app);
+    manatui_end(app);
     exit(0);
   }
 
@@ -160,7 +160,7 @@ void app_key_handle(Application* app, unsigned int c) {
 }
 
 // Application loop
-void potatui_loop(Application* app) {
+void manatui_loop(Application* app) {
   if (app == NULL) return;
 
   // make sure to initialize the focused container when the loop starts
@@ -199,7 +199,7 @@ void* app_alloc(Application* app, void* old_ptr, size_t size) {
   // on fail, end ncurses and clear memory safely
   if (new_ptr == NULL) {
     fprintf(stderr, "Critical error: failed allocating memory.\n");
-    potatui_end(app);
+    manatui_end(app);
     exit(1);
   }
 
@@ -827,6 +827,13 @@ void _textinput_default_actions(void* context, unsigned int c) {
   curs_set(1);
 }
 
+// Adds a string as the textinput content
+void textinput_set(TextInput* input, const char* str) {
+  if (input == NULL || str == NULL) return;
+  memcpy(input->content, str, strlen(str));
+  input->content_size = strlen(str);
+}
+
 // create a new TextInput
 TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
   if (parent == NULL) return NULL;
@@ -863,7 +870,8 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
 
 // Force re-drawing the input when needed.
 // For example, when you create a disabled input and then add text to it - you should re-render the input.
-void textinput_render(TextInput* input) {
+void textinput_render(Application* app, TextInput* input) {
+  app_add_container(app, input);
   _textinput_default_actions(input, 0);
 }
 

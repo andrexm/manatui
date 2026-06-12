@@ -1,9 +1,9 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
 
 int main() {
   // Start the application
-  Application* app = potatui_init();
+  Application* app = manatui_init();
 
   int width = 30;
   int height = 20;
@@ -27,13 +27,13 @@ int main() {
                   TRUE, // break line if the text is larger than the container width
                   1, // start at y column of the container - 1 is to write below the top border
                   1, // start at x row of the container - 1 writes after the left border
-                  "Hello, welcome to Potatui. It was written completely in %c and %s!", // we can pass a formatted string, like with printf
+                  "Hello, welcome to Manatui. It was written completely in %c and %s!", // we can pass a formatted string, like with printf
                   'C', "ncurses" // then you pass as many parameters as you need in your string
                 );
   container_update(con);
 
   getch(); // wait for a keypress
   
-  potatui_end(app); // finish the app
+  manatui_end(app); // finish the app
   return 0;
 }

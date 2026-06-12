@@ -1,4 +1,4 @@
-#include "../include/potatui.h"
+#include "../include/manatui.h"
 #include <ncurses.h>
 
 void on_focus(int c, void* context) {
@@ -15,7 +15,7 @@ void on_focus(int c, void* context) {
 }
 
 int main() {
-  Application* app = potatui_init();
+  Application* app = manatui_init();
 
   int width = 50;
   int start_x = (COLS / 2) - (width / 2);
@@ -34,7 +34,7 @@ int main() {
   btn->base.is_focused = TRUE;
 
 
-  potatui_loop(app);
+  manatui_loop(app);
 
-  potatui_end(app);
+  manatui_end(app);
 }
