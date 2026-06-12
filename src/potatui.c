@@ -1354,6 +1354,11 @@ void _textarea_actions(void* context, unsigned int c) {
   );
   int visual_x = textarea->line_number_width + visual_distance + 2; 
 
+  // after pressing 'i' when the textarea is disabled
+  if (c == textarea->enable_key) {
+    textarea->disabled = FALSE;
+  }
+
   wmove(textarea->base.dwin, visual_y, visual_x);
 
   // update screen buffers
@@ -1378,6 +1383,7 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->scroll_row = 0;
   textarea->scroll_col = 0;
   textarea->disabled = FALSE;
+  textarea->enable_key = -1;
   textarea->show_line_numbers = FALSE;
   textarea->line_number_width = 4;
 
@@ -1392,6 +1398,7 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->base.width = width;
   textarea->base.user_data = NULL;
   textarea->base.title = label;
+  textarea->base.type = TYPE_TEXTAREA;
 
   // extra style default value
   textarea->content_color = NULL;
