@@ -1,4 +1,5 @@
 #include <ncurses.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,7 +72,9 @@ void app_add_container(Application* app, Container* con) {
 
 // Move the focus to the specified container
 void app_focus_on(Application* app, void* con) {
-  if (con == NULL) return;
+  if (app == NULL || con == NULL) return;
+  Container* obj = (Container*)con;
+  obj->is_focused = FALSE;
   app->focused_container = (Container*)con;
 }
 
@@ -446,38 +449,35 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
 }
 
 // position the cursor inside the specified button and add it to the app->focused_container
-void button_select(Application* app, Container* btn) {
-  if (app == NULL || btn == NULL) return;
-
-  if (app->focused_container != NULL) {
-    Button* old_btn = (Button*)app->focused_container;
-    int old_x = (old_btn->base.width / 2) - (strlen(old_btn->label) / 2);
-
-    container_print(app->focused_container, FALSE, 1, 1, "%-*s", old_btn->base.width - 2, " ");
-    container_print(app->focused_container, FALSE, 1, old_x, "%s", old_btn->label);
-    wnoutrefresh(app->focused_container->dwin);
+void _button_actions(void* context, int c) {
+  if (context == NULL) {
+    fprintf(stderr, "Failed to start button actions.\n");
+    exit(1);
   }
 
-  // change focus to the new button
-  app->focused_container = btn;
-  Button* new_btn = (Button*)btn;
-  int new_x = (new_btn->base.width / 2) - (strlen(new_btn->label) / 2);
+  curs_set(0);
+  Button* btn = (Button*)context;
 
-  container_print(btn, FALSE, 1, 1, "%-*s", new_btn->base.width - 2, " ");
-  
+  int position_x = (btn->base.width / 2) - (strlen(btn->label) / 2);
+  // 
   // print label in BOLD
-  wattron(btn->dwin, A_BOLD);
-  container_print(btn, FALSE, 1, new_x, "%s", new_btn->label);
-  wattroff(btn->dwin, A_BOLD); // turn off BOLD
-  
-  wnoutrefresh(btn->dwin);
-  doupdate();
+  wclear(btn->base.dwin);
+
+  wattron(btn->base.dwin, A_BOLD);
+  container_print((Container*)btn, FALSE, 1, position_x, "%s", btn->label);
+  wattroff(btn->base.dwin, A_BOLD); // turn off BOLD
+
+  int pos_x = btn->base.width / 2;
+  wmove(btn->base.dwin, 1, pos_x);
+  container_update(btn);
+  curs_set(1);
 }
 
 void button_render(Application* app, Button* button) {
   if (app == NULL || button == NULL) return;
-
   app_add_container(app, (Container*)button);
+  container_apply_style(button);
+  _button_actions(button, 0);
 }
 
 
