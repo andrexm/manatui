@@ -13,11 +13,9 @@ void handle_my_textarea(int c, void* context) {
 
   // handle ESC key
   if (c == 27) {
+    // when the user press ESC, the textarea will be disabled
+    // but if the user press 'i' (see line 42) the textarea will be enable again
     textarea->disabled = TRUE;
-  }
-  // reactivate the textarea
-  if (textarea->disabled && c == 'i') {
-    textarea->disabled = FALSE;
   }
 }
 
@@ -41,6 +39,7 @@ int main() {
   textarea->base.user_data = textarea; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
   textarea->show_line_numbers = TRUE; // show the column of numbers
   textarea->line_number_width = 4; // opitional: set up the width of the column of numbers
+  textarea->enable_key = 'i'; // if you set this, when disabled, if the user press 'i' then the textarea will be enabled
   textarea->base.foreground = "#177458";
   textarea->base.background = "#000000";
   textarea->content_color = "#6b7a73";
