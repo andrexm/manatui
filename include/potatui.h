@@ -103,7 +103,7 @@ typedef struct {
  * Application ---------------------------------------------------------------
 */
 Application* potatui_init();
-void app_add_container(Application* app, Container* con);
+void app_add_container(Application* app, void* container);
 void app_focus_on(Application* app, void* con);
 void app_key_handle(Application* app, unsigned int c);
 void potatui_loop(Application* app);
