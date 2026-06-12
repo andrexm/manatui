@@ -36,12 +36,13 @@ int main() {
     handle_my_textarea // on focus callback
   );
 
+  textarea->base.has_border = FALSE;
   textarea->base.user_data = textarea; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
   textarea->show_line_numbers = TRUE; // show the column of numbers
   textarea->line_number_width = 4; // opitional: set up the width of the column of numbers
   textarea->enable_key = 'i'; // if you set this, when disabled, if the user press 'i' then the textarea will be enabled
   textarea->base.foreground = "#177458";
-  textarea->base.background = "#000000";
+  textarea->base.background = "#090b0c";
   textarea->content_color = "#6b7a73";
 
   // add some lines to the textarea
