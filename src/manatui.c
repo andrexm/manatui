@@ -489,30 +489,9 @@ void button_render(Application* app, Button* button) {
  * Lists ------------------------------------------------------------------------------------------------------------
 */
 
-// Select an item at the given position
-void list_item_select(List *list, const int position) {
+void _list_draw(List* list) {
   if (list == NULL) return;
-  if (position < 0 || position >= list->items) return;
-
-  list->selected = position;
-
-  // adjust scroll to make the selected item visible
-  int visible_height = list->base.height - 2;
-  if (list->selected < list->scroll_top) {
-    list->scroll_top = list->selected;
-  }
-  if (list->selected >= list->scroll_top + visible_height) {
-    list->scroll_top = list->selected - visible_height + 1;
-  }
-
-  // update list
-  list_render(list);
-}
-
-// render the list component
-void list_render(List* list) {
-  if (list == NULL || list->base.dwin == NULL) return;
-
+  
   // hide the cursor
   curs_set(0);
 
@@ -553,6 +532,42 @@ void list_render(List* list) {
   // show the cursor again
   curs_set(1);
 }
+
+// Select an item at the given position
+void list_item_select(List *list, const int position) {
+  if (list == NULL) return;
+  if (position < 0 || position >= list->items) return;
+
+  list->selected = position;
+
+  // adjust scroll to make the selected item visible
+  int visible_height = list->base.height - 2;
+  if (list->selected < list->scroll_top) {
+    list->scroll_top = list->selected;
+  }
+  if (list->selected >= list->scroll_top + visible_height) {
+    list->scroll_top = list->selected - visible_height + 1;
+  }
+
+  // update list
+  _list_draw(list);
+}
+
+// render the list component
+void list_render(Application* app, List* list) {
+  if (list == NULL || list->base.dwin == NULL) return;
+
+  app_add_container(app, (Container*)list);
+
+  // apply foreground and background when they are set
+  if (list->base.foreground != NULL) {
+    if (list->base.background == NULL) {
+      list->base.background = "#000000";
+    }
+    container_apply_style(list);  
+  }
+  _list_draw(list);
+}
  
 // This executes when the list is focused, with the purpose of managing default actions of each list
 void _list_actions(void* context, unsigned int c) {
@@ -586,7 +601,7 @@ void _list_actions(void* context, unsigned int c) {
     list->scroll_top = list->selected - visible_height + 1;
   }
   
-  list_render(list);
+  _list_draw(list);
 }
 
 // Creates a new list and returns its pointer
