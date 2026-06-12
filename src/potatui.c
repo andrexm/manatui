@@ -63,7 +63,9 @@ Application* potatui_init() {
 }
 
 // Adds a new container to the focusable list
-void app_add_container(Application* app, Container* con) {
+void app_add_container(Application* app, void* container) {
+  if (app == NULL || container == NULL) return;
+  Container* con = (Container*)container;
   if (app->total_containers < MAX_CONTAINERS) {
     app->container_list[app->total_containers] = con;
     app->total_containers++;
@@ -475,7 +477,7 @@ void _button_actions(void* context, int c) {
 
 void button_render(Application* app, Button* button) {
   if (app == NULL || button == NULL) return;
-  app_add_container(app, (Container*)button);
+  app_add_container(app, button);
   container_apply_style(button);
   _button_actions(button, 0);
 }
@@ -1435,7 +1437,7 @@ void textarea_render(Application* app, TextArea *textarea) {
   if (textarea == NULL) return;
 
   // add component to the focusable list
-  app_add_container(app, (Container*)textarea); // add to the focusable list
+  app_add_container(app, textarea); // add to the focusable list
 
   // init specific colors
   // set up foreground and background colors - in the case of textarea, the content color is set separetely if we desire to
