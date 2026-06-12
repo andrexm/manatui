@@ -10,6 +10,10 @@
 
 typedef enum {
   TYPE_TEXTAREA,
+  TYPE_CONTAINER,
+  TYPE_TEXTINPUT,
+  TYPE_LIST,
+  TYPE_BUTTON
 } ComponentType;
 
 // List of objects to be freed at the end (at potatui_end())
