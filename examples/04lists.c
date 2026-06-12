@@ -30,22 +30,18 @@ int main() {
   // OPTIONAL - adding some colors
   list->base.foreground = "#ff7823";
   list->base.background = "#222226";
-  container_apply_style(list);
 
   // adding some content to the list
   for (int i = 0; i < 10; i++) {
     list_item_add(list, "This is the line N%d!", i+1);
   }
-  list_render(list);
+  list_render(app, list);
+  app_focus_on(app, list); // start focusing on the list
 
   // we can read the list content whenever we want
   for (int i = 0; i < list->items; i++) {
     mvprintw(i + 1, 60, "%s", list->content[i]);
   }
-
-  // set up list focus
-  app_add_container(app, (Container*)list);
-  app_focus_on(app, list); // start focusing on the list
 
   manatui_loop(app);
 
