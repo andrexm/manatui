@@ -373,6 +373,9 @@ void container_update(void* obj) {
       mvwprintw(con->dwin, 0, 2, "< %s >", con->title);
     }
   }
+  /*else {
+    wborder(con->dwin, ' ', ' ', ' ', ' ', ' ', ' ',  ' ', ' ');
+  }*/
 
   // end the colors
   if (con->color_pair_id > 0) {
@@ -1416,7 +1419,7 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
 
   // base container properties
   textarea->base.actions = _textarea_actions;
-  textarea->base.has_border = TRUE;
+  textarea->base.has_border = FALSE;
   textarea->base.height = height; // top and bottom borders plus content in one line
   textarea->base.on_focus = callback;
   textarea->base.parent = parent;
