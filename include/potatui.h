@@ -8,6 +8,10 @@
 
 #define MAX_CONTAINERS 50
 
+typedef enum {
+  TYPE_TEXTAREA,
+} ComponentType;
+
 // List of objects to be freed at the end (at potatui_end())
 typedef struct {
   void** pointers;
@@ -30,6 +34,7 @@ typedef struct {
   const char* background; // "#000000"
   int color_pair_id; // the framework generates
 
+  ComponentType type;
   const char* title;
   bool has_border;
   bool is_focused;
@@ -94,6 +99,7 @@ typedef struct {
   bool show_line_numbers;
   int line_number_width;
   bool disabled;
+  int enable_key; // when disabled, set up a key to enabled the textarea again or leave NULL to avoid the user from enabling
   char* content_color;
   int content_color_id;
 } TextArea;

@@ -268,6 +268,7 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
   temp->has_border = has_border;
   temp->user_data = NULL;
   temp->parent = parent;
+  temp->type = TYPE_CONTAINER;
 
   // Initialize before printing any content inside it
   container_init(temp);
@@ -430,6 +431,7 @@ Button* button_create(WINDOW* parent, int height, int width, int start_y, int st
   btn->base.has_border = TRUE;
   btn->base.actions = NULL;
   btn->base.user_data = NULL;
+  btn->base.type = TYPE_BUTTON;
 
   container_init(btn);
 
@@ -601,6 +603,7 @@ List* list_create(WINDOW* parent, int height, int width, int start_y, int start_
   temp->base.on_focus = callback;
   temp->base.title = title;
   temp->base.parent = parent;
+  temp->base.type = TYPE_LIST;
 
   // List properties
   temp->content = NULL;
@@ -848,6 +851,7 @@ TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x,
   input->base.width = width;
   input->base.user_data = NULL;
   input->base.title = label;
+  input->base.type = TYPE_TEXTINPUT;
 
   container_init(input);
   container_update(input);
