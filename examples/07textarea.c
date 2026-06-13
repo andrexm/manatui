@@ -36,7 +36,7 @@ int main() {
     handle_my_textarea // on focus callback
   );
 
-  textarea->base.has_border = FALSE;
+  textarea->base.has_border = TRUE;
   textarea->base.user_data = textarea; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
   textarea->show_line_numbers = TRUE; // show the column of numbers
   textarea->line_number_width = 4; // opitional: set up the width of the column of numbers
@@ -44,6 +44,7 @@ int main() {
   textarea->base.foreground = "#177458";
   textarea->base.background = "#090b0c";
   textarea->content_color = "#6b7a73";
+  textarea->tabs_for_spaces = TRUE;
 
   // add some lines to the textarea
   textarea_add_line(textarea, "This is the first line! This text continues until where I want it to stop. Maybe here, or here.");
