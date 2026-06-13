@@ -90,6 +90,7 @@ typedef struct {
   char** lines; // array of lines
   int total_lines;
   int lines_capacity;
+  bool tabs_for_spaces;
 
   // where the cursor is
   int cursor_row;
