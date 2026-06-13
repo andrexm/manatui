@@ -1476,6 +1476,9 @@ void textarea_render(Application* app, TextArea *textarea) {
   // add component to the focusable list
   app_add_container(app, textarea); // add to the focusable list
 
+  // add initial content to the textarea if it's empty
+  textarea_add_line(textarea, "");
+
   // init specific colors
   // set up foreground and background colors - in the case of textarea, the content color is set separetely if we desire to
   if (textarea->base.foreground != NULL) {
