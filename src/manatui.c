@@ -1248,6 +1248,18 @@ void _textarea_remove_left_char(TextArea* textarea) {
   }
 }
 
+// if the textarea->tabs_for_spaces is set to true, write 4 ' ' characters when the user press tab
+void _textarea_handle_tabs(TextArea* textarea) {
+  if (textarea == NULL) {
+    return;
+  }
+  if (textarea->tabs_for_spaces && !textarea->disabled) {
+    for (int i = 0; i < 4; i++) {
+      _textarea_add_char(textarea, ' ');
+    }
+  }
+}
+
 // Default behavior of the TextArea
 void _textarea_actions(void* context, unsigned int c) {
   TextArea* textarea = (TextArea*)context;
@@ -1269,6 +1281,7 @@ void _textarea_actions(void* context, unsigned int c) {
     case KEY_RIGHT: textarea_handle_key_right(textarea); break; // move cursor RIGHT
     case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
     case 10: case KEY_ENTER: textarea_handle_key_enter(textarea); break; // when pressing ENTER
+    case '\t': _textarea_handle_tabs(textarea); break;
 
     case KEY_BACKSPACE:
       if (textarea->disabled == FALSE) {
@@ -1416,6 +1429,7 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->enable_key = -1;
   textarea->show_line_numbers = FALSE;
   textarea->line_number_width = 4;
+  textarea->tabs_for_spaces = FALSE;
 
   // base container properties
   textarea->base.actions = _textarea_actions;
