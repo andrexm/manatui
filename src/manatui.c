@@ -1320,7 +1320,7 @@ bool _is_special_char(char c) {
           c == '+' || c == '-' || c == '*' || c == '/' || 
           c == '=' || c == '<' || c == '>' || c == '!' ||
           c == '&' || c == '|' || c == '^' || c == '%' ||
-          c == '?' || c == '.');
+          c == '?' || c == '.' || c == '#');
 }
 
 // Helper function to check if a word is followed by '(' (function call/declaration)
