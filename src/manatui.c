@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -8,6 +9,7 @@
 #include <locale.h>
 
 #include "../manatui.h"
+#include "./textarea_syntax_colors.h"
 
 
 /**
@@ -15,6 +17,8 @@
 */
 static int global_color_pair_counter = 1;
 static int global_color_id_counter = 16; // avoid overwritting the default colors
+static TextAreaActiveTheme textarea_active_theme; // color ids for the active theme
+const TextareaTheme* active_theme = &default_theme;
 
 // Converts a hex color to the ncurses format
 int _register_hex_color(int color_id, const char* hex_str) {
@@ -1260,45 +1264,230 @@ void _textarea_handle_tabs(TextArea* textarea) {
   }
 }
 
-// Default behavior of the TextArea
-void _textarea_actions(void* context, unsigned int c) {
-  TextArea* textarea = (TextArea*)context;
-  if (textarea == NULL) return;
+bool _char_is_alphanumeric(char c) {
+  return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
 
-  curs_set(0);
+// detects if the next characters represent a word (a sequence of alphanumeric characters).
+// it returns the amount of characters that compose the word or -1 if it is not a word.
+int _text_starting_word(char* content, int index) {
+  int count = 0;
+  if (content[index] == '_' || (content[index] >= 'a' && content[index] <= 'z') || (content[index] >= 'A' && content[index] <= 'Z')) {
+    // get next word
+    int len = strlen(content);
+    for (int i = index + 1; i < len; i++) {
+      if (_char_is_alphanumeric(content[i])) {
+        count++;
+      } else {
+        break;
+      }
+    }
+    //return count + index;
+    return count + 1;
+  }
+  return -1;
+}
 
-  int max_visible_lines = _textarea_get_max_visible_lines(textarea);
-  int usable_width = textarea_get_usable_width(textarea);
+// receives the lang, which is from the Language enum, and returns a pointer for the requested LanguageData.
+// I think it's better to make it this way, because it avoids the necessity of importing the
+// header containing all the languages definitions into their program (into the textarea). Instead,
+// the enum is in the lib header and we just have to translate it here.
+const LanguageData* _get_language(Language lang) {
+  if (lang == LANG_C) return &clang;
+  return &clang;
+}
 
-  // fix line number width
-  if (textarea->line_number_width == 0) {
-    _textarea_set_line_width(textarea);
+// returns true if the given word is a keyword of the given language
+bool _text_is_keyword(const char* word, Language lang) {
+  const LanguageData* language = _get_language(lang);
+  //const LanguageData language = clang;
+  if (word == NULL || language->keywords == NULL || lang == LANG_NONE) {
+    return false;
+  }
+  // look for a keyword
+  for (int i = 0; i < language->total; i++) {
+    if (strcmp(word, language->keywords[i]) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// used to identify only selected special characters
+bool _is_special_char(char c) {
+  return (c == ':' || c == ';' || c == '[' || c == ']' || 
+          c == '{' || c == '}' || c == '(' || c == ')' ||
+          c == '+' || c == '-' || c == '*' || c == '/' || 
+          c == '=' || c == '<' || c == '>' || c == '!' ||
+          c == '&' || c == '|' || c == '^' || c == '%' ||
+          c == '?' || c == '.');
+}
+
+// Helper function to check if a word is followed by '(' (function call/declaration)
+int _is_function_call(TextArea* textarea, char* content, int word_start, int word_len, int content_len) {
+  // check if there's a '(' after the word (ignoring whitespace)
+  int pos = word_start + word_len;
+  
+  // skip whitespace
+  while (pos < content_len && isspace((unsigned char)content[pos])) {
+    pos++;
+  }
+  
+  // if we find '(', it's a function call/declaration
+  if (pos < content_len && content[pos] == '(') {
+    return 1;
+  }
+  
+  return 0;
+}
+
+// Prints a word with the appropriate color (keyword, function, or regular text)
+void _print_colored_word(TextArea* textarea, char* word, int word_len, int is_function) {
+  if (is_function) {
+    wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
+    wprintw(textarea->base.dwin, "%.*s", word_len, word);
+    wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
+  } 
+  else if (_text_is_keyword(word, textarea->language)) {
+    wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
+    wprintw(textarea->base.dwin, "%.*s", word_len, word);
+    wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
+  }
+  else {
+    wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+    wprintw(textarea->base.dwin, "%.*s", word_len, word);
+    wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+  }
+}
+
+// print highlighted line content
+void _textarea_print_with_color(TextArea* textarea, char* content, int row, int col_start) {
+  if (textarea == NULL || content == NULL) return;
+
+  // move the cursor to the correct position to start printing
+  wmove(textarea->base.dwin, row, col_start);
+  
+  int index = 0;
+  int len = strlen(content);
+
+  // start analyzing symbol by symbol to print each stuff correctly
+  while (index < len) {
+
+    // ------------------
+    // print comments
+    if (content[index] == '/' && index + 1 < len && content[index + 1] == '/') {
+      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
+      while (index < len) {
+        waddch(textarea->base.dwin, content[index++]);
+      }
+      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
+      break; // ended printing line
+    }
+    
+    // ------------------
+    // print strings (double quotes)
+    if (content[index] == '"') {
+      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
+      waddch(textarea->base.dwin, content[index++]); // print opening quote
+
+      while (index < len && content[index] != '"') {
+        // handle escaped quotes
+        if (content[index] == '\\' && index + 1 < len && content[index + 1] == '"') {
+          waddch(textarea->base.dwin, content[index++]); // print backslash
+          waddch(textarea->base.dwin, content[index++]); // print quote
+          continue;
+        }
+        waddch(textarea->base.dwin, content[index++]);
+      }
+
+      // print closing quote if it exists
+      if (index < len && content[index] == '"') {
+        waddch(textarea->base.dwin, content[index++]);
+      }
+      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
+      continue;
+    }
+
+    // ------------------
+    // print single characters (single quotes)
+    if (content[index] == '\'') {
+      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
+      waddch(textarea->base.dwin, content[index++]); // print opening quote
+
+      while (index < len && content[index] != '\'') {
+        // handle escaped quotes
+        if (content[index] == '\\' && index + 1 < len && content[index + 1] == '\'') {
+          waddch(textarea->base.dwin, content[index++]); // print backslash
+          waddch(textarea->base.dwin, content[index++]); // print quote
+          continue;
+        }
+        waddch(textarea->base.dwin, content[index++]);
+      }
+
+      // print closing quote if it exists
+      if (index < len && content[index] == '\'') {
+        waddch(textarea->base.dwin, content[index++]);
+      }
+      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
+      continue;
+    }
+
+    // ------------------
+    // printing numbers (digits)
+    if (isdigit((unsigned char)content[index])) {
+      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
+      while (index < len && isdigit((unsigned char)content[index])) {
+        waddch(textarea->base.dwin, content[index++]);
+      }
+      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
+      continue;
+    }
+
+    // ------------------
+    // printing special characters (operators, brackets, etc.)
+    if (_is_special_char(content[index])) {
+      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
+      waddch(textarea->base.dwin, content[index++]);
+      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
+      continue;
+    }
+    
+    // ------------------
+    // print words (keywords, function names, variable names)
+    int word_len = _text_starting_word(content, index);
+    if (word_len > 0) {
+      // extract the word
+      char word[256];
+      for (int i = 0; i < word_len && i < 255; i++) {
+        word[i] = content[index + i];
+      }
+      word[word_len] = '\0';
+      
+      // check if this word is a function call/declaration
+      int is_function = _is_function_call(textarea, content, index, word_len, len);
+      
+      // print the word with appropriate color
+      _print_colored_word(textarea, word, word_len, is_function);
+      
+      // move index past the word
+      index += word_len;
+      continue;
+    }
+
+    // ------------------
+    // print any remaining character (spaces, operators not caught by special chars, etc.)
+    // This ensures we don't skip any characters
+    wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+    waddch(textarea->base.dwin, content[index++]);
+    wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+  }
+}
+
+void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usable_width) {
+  if (textarea == NULL) {
+    return;
   }
 
-  switch (c) {
-    case KEY_DOWN: textarea_handle_key_down(textarea, max_visible_lines); break; // move cursor DOWN
-    case KEY_UP: textarea_handle_key_up(textarea); break; // move cursor UP
-    case KEY_RIGHT: textarea_handle_key_right(textarea); break; // move cursor RIGHT
-    case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
-    case 10: case KEY_ENTER: textarea_handle_key_enter(textarea); break; // when pressing ENTER
-    case '\t': _textarea_handle_tabs(textarea); break;
-
-    case KEY_BACKSPACE:
-      if (textarea->disabled == FALSE) {
-        _textarea_remove_left_char(textarea);
-      }
-      break;
-
-    // print the character
-    default:
-      if ((c >= 32 && c <= 126 || c >= 128 && c <= 254) && textarea->disabled == FALSE) {
-        _textarea_add_char(textarea, c);
-      }
-      break;
-  }
-  container_update(textarea);
-
-  // render the visible text and line numbers
   for (int i = 0; i < max_visible_lines; i++) {
     int file_line_index = textarea->scroll_row + i;
     int screen_row = i + 1;
@@ -1321,7 +1510,7 @@ void _textarea_actions(void* context, unsigned int c) {
 
       // calculate the exact limit of bytes to avoid breaking UTF-8 chars visually
       int byte_limit = 0;
-      int visual_count = 0;
+      int visual_count = 0; // how many characters to print
       while (content[byte_limit] != '\0' && visual_count < usable_width) {
         // if it is not a continuation byte, add 1 to the visual_count
         if ((content[byte_limit] & 0xC0) != 0x80) {
@@ -1329,17 +1518,44 @@ void _textarea_actions(void* context, unsigned int c) {
         }
         byte_limit++;
       }
+
+      if (textarea->use_theme_colors) {
+        for (int i = 0; i < visual_count; i++) {
+          //i = _theme_next_word(content, i);
+          int is_word = 0;
+          if (_text_starting_word(content, i) > 0) {
+            is_word = _text_starting_word(content, i);
+          }
+        }
+      }
+
+      // ------------------------------------------------------
+      // PRINTING CONTENT
+      //
+      // printing with theme colors
+      if (textarea->language != LANG_NONE && textarea->use_theme_colors) {
+        _textarea_print_with_color(textarea, content, screen_row, textarea->line_number_width + 2);
+      }
+
+      // printing with default textarea foreground color
+      else {
+        // print normal content
+        container_print(
+          (Container*)textarea,
+          FALSE,
+          screen_row,
+          textarea->line_number_width + 2,
+          "%.*s",
+          byte_limit,
+          content
+        );
+      }
+
+      // needed to update when using syntax highlighting
+      container_update(textarea);
   
-      // print the visible text
-      container_print(
-        (Container*)textarea,
-        FALSE,
-        screen_row,
-        textarea->line_number_width + 2,
-        "%.*s",
-        byte_limit,
-        content
-      );
+      // END PRINTING CONTENT
+      // -------------------------------------------------------
 
       // manually add empty spaces to the rest of the line to remove "virtual" characters
       // because C functions are a nightmare to handle this
@@ -1385,6 +1601,48 @@ void _textarea_actions(void* context, unsigned int c) {
       }
     }
   }
+}
+
+// Default behavior of the TextArea
+void _textarea_actions(void* context, unsigned int c) {
+  TextArea* textarea = (TextArea*)context;
+  if (textarea == NULL) return;
+
+  curs_set(0);
+
+  int max_visible_lines = _textarea_get_max_visible_lines(textarea);
+  int usable_width = textarea_get_usable_width(textarea);
+
+  // fix line number width
+  if (textarea->line_number_width == 0) {
+    _textarea_set_line_width(textarea);
+  }
+
+  switch (c) {
+    case KEY_DOWN: textarea_handle_key_down(textarea, max_visible_lines); break; // move cursor DOWN
+    case KEY_UP: textarea_handle_key_up(textarea); break; // move cursor UP
+    case KEY_RIGHT: textarea_handle_key_right(textarea); break; // move cursor RIGHT
+    case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
+    case 10: case KEY_ENTER: textarea_handle_key_enter(textarea); break; // when pressing ENTER
+    case '\t': _textarea_handle_tabs(textarea); break;
+
+    case KEY_BACKSPACE:
+      if (textarea->disabled == FALSE) {
+        _textarea_remove_left_char(textarea);
+      }
+      break;
+
+    // print the character
+    default:
+      if ((c >= 32 && c <= 126 || c >= 128 && c <= 254) && textarea->disabled == FALSE) {
+        _textarea_add_char(textarea, c);
+      }
+      break;
+  }
+  container_update(textarea);
+
+  // render the visible text and line numbers
+  _textarea_draw_content(textarea, max_visible_lines, usable_width);
 
   // update cursor
   int visual_y = textarea->cursor_row - textarea->scroll_row + 1;
@@ -1411,6 +1669,52 @@ void _textarea_actions(void* context, unsigned int c) {
   curs_set(1);
 }
 
+// init the given color pair
+// returns the colors pair id
+int _theme_start_color(char* color, char* background) {
+  if (color == NULL || background == NULL || !has_colors()) return -1;
+
+  static int background_color_id = -1; // track if bg_id was already setted up for the theme
+  int fg_id = global_color_id_counter++;
+  int bg_id = 0;
+  int pair_id = global_color_pair_counter++;
+
+  // init colors
+  _register_hex_color(fg_id, color);
+  // init the background if it's not started yet
+  if (background_color_id <= 0) {
+    bg_id = global_color_id_counter++;
+    _register_hex_color(bg_id, background);
+    background_color_id = bg_id;
+  }
+  // if the background already exists
+  else {
+    bg_id = background_color_id;
+  }
+
+  // init color pair
+  init_pair(pair_id, fg_id, bg_id);
+  return pair_id;
+}
+
+// init each theme color pair, but not the background variant color
+void _textarea_init_theme(TextArea* textarea) {
+  if (textarea == NULL || !textarea->use_theme_colors) {
+    return;
+  }
+  // init each color and save into the textarea_active_theme
+  // all textareas follow the same theme if active
+  textarea_active_theme.keyword_id = _theme_start_color(active_theme->keyword_color, active_theme->background_color);
+  textarea_active_theme.function_id = _theme_start_color(active_theme->function_color, active_theme->background_color);
+  textarea_active_theme.char_id = _theme_start_color(active_theme->char_color, active_theme->background_color);
+  textarea_active_theme.comment_id = _theme_start_color(active_theme->comment_color, active_theme->background_color);
+  textarea_active_theme.line_number_id = _theme_start_color(active_theme->line_number_color, active_theme->background_color);
+  textarea_active_theme.number_id = _theme_start_color(active_theme->number_color, active_theme->background_color);
+  textarea_active_theme.string_id = _theme_start_color(active_theme->string_color, active_theme->background_color);
+  textarea_active_theme.text_id = _theme_start_color(active_theme->text_color, active_theme->background_color);
+  textarea_active_theme.symbol_id = _theme_start_color(active_theme->symbol_color, active_theme->background_color);
+}
+
 // create a new TextArea
 TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
   if (parent == NULL) return NULL;
@@ -1430,6 +1734,8 @@ TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, in
   textarea->show_line_numbers = FALSE;
   textarea->line_number_width = 4;
   textarea->tabs_for_spaces = FALSE;
+  textarea->use_theme_colors = FALSE;
+  textarea->language = LANG_NONE;
 
   // base container properties
   textarea->base.actions = _textarea_actions;
@@ -1491,7 +1797,15 @@ void textarea_render(Application* app, TextArea *textarea) {
   app_add_container(app, textarea); // add to the focusable list
 
   // add initial content to the textarea if it's empty
-  textarea_add_line(textarea, "");
+  if (textarea->lines == NULL || textarea->total_lines < 1) {
+    textarea_add_line(textarea, "");
+  }
+
+  // is the theme was set to be used, init its colors
+  if (textarea->use_theme_colors) {
+    _textarea_init_theme(textarea);
+    textarea->base.background = active_theme->background_color;
+  }
 
   // init specific colors
   // set up foreground and background colors - in the case of textarea, the content color is set separetely if we desire to
