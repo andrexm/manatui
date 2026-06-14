@@ -45,10 +45,13 @@ int main() {
   textarea->base.background = "#090b0c";
   textarea->content_color = "#6b7a73";
   textarea->tabs_for_spaces = TRUE;
+  textarea->use_theme_colors = TRUE;
+  textarea->language = LANG_C;
 
   // add some lines to the textarea
-  textarea_add_line(textarea, "This is the first line! This text continues until where I want it to stop. Maybe here, or here.");
-  textarea_add_line(textarea, "Another line, try typing something.");
+  textarea_add_line(textarea, "int a = 78;");
+  textarea_add_line(textarea, "// int a = 78;");
+  textarea_add_line(textarea, "static void main(\"\")");
 
   app_focus_on(app, textarea); // start focus on it
   textarea_render(app, textarea); // draw the textarea
