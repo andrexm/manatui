@@ -16,6 +16,38 @@ typedef enum {
   TYPE_BUTTON
 } ComponentType;
 
+typedef enum {
+  LANG_C,
+  LANG_CSS,
+  LANG_C3,
+  LANG_CSHARP,
+  LANG_D,
+  LANG_HTML,
+  LANG_JAVA,
+  LANG_JAVASCRIPT,
+  LANG_ODIN,
+  LANG_PHP,
+  LANG_PYTHON,
+
+  // no language, default value
+  LANG_NONE
+} Language;
+
+// the active theme for textarea
+typedef struct {
+  int keyword_id;
+  int function_id;
+  int number_id;
+  int line_number_id;
+  int symbol_id;
+  int background_id;
+  int background_variant_id;
+  int comment_id;
+  int string_id;
+  int char_id;
+  int text_id;
+} TextAreaActiveTheme;
+
 // List of objects to be freed at the end (at manatui_end())
 typedef struct {
   void** pointers;
@@ -91,6 +123,7 @@ typedef struct {
   int total_lines;
   int lines_capacity;
   bool tabs_for_spaces;
+  Language language;
 
   // where the cursor is
   int cursor_row;
@@ -107,6 +140,7 @@ typedef struct {
   int enable_key; // when disabled, set up a key to enabled the textarea again or leave NULL to avoid the user from enabling
   char* content_color;
   int content_color_id;
+  bool use_theme_colors;
 } TextArea;
 
 
