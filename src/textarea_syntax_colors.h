@@ -17,7 +17,7 @@ typedef struct {
   char* text_color; // other words, like variable names
 } TextareaTheme;
 
-const TextareaTheme default_theme = { "#009f80", "#5082be", "#cdaa19", "#76797a", "#999999", "#151517", "#303030", "#514f56", "#ff5822", "#f9a337", "#b2b2b2" };
+const TextareaTheme default_theme = { "#009f80", "#5082be", "#cdaa19", "#76797a", "#64748b", "#151517", "#303030", "#514f56", "#ff5822", "#f9a337", "#9ca8ab" };
 
 typedef struct {
   const char** keywords;
