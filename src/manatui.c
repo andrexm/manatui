@@ -1401,8 +1401,13 @@ int _text_starting_word(char* content, int index) {
 // header containing all the languages definitions into their program (into the textarea). Instead,
 // the enum is in the lib header and we just have to translate it here.
 const LanguageData* _get_language(Language lang) {
-  if (lang == LANG_C) return &clang;
-  return &clang;
+  switch (lang) {
+    case LANG_C: return &clang;
+    case LANG_C3: return &c3lang;
+
+    default:
+      return &clang;
+  }
 }
 
 // returns true if the given word is a keyword of the given language
