@@ -24,6 +24,9 @@ typedef struct {
   int total;
 } LanguageData;
 
+// ----------------------
+// C Language
+// ----------------------
 static const char* c_keywords_list[] = {
   "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else",
   "enum", "extern", "float", "for", "goto", "if", "int", "long", "register", "return", "short",
@@ -34,4 +37,21 @@ static const char* c_keywords_list[] = {
 const LanguageData clang = {
   c_keywords_list,
   sizeof(c_keywords_list) / sizeof(char*)
+};
+
+// ----------------------
+// C3 Language
+// ----------------------
+static const char* c3_keywords_list[] = {
+  "alias", "align", "any", "bfloat64", "bool", "break", "case", "catch", "CChar", "char", "CInt",
+  "CLong", "CLongDouble", "CLongLong", "continue", "const", "CShort", "CUInt", "CULong", "CULongLong",
+  "CUShort", "default", "defer", "double", "embed", "enum", "else", "fault", "faultdef", "float",
+  "float128", "float16", "fn", "for", "foreach", "ichar", "if", "import", "inline", "int", "int128",
+  "iptr", "long", "macro", "module", "pure", "return", "short", "static", "String", "struct", "sz", "switch",
+  "try", "typeid", "uint", "uint128", "ulong", "union", "uptr", "ushort", "usz", "var", "void", "while", "ZString"
+};
+
+const LanguageData c3lang = {
+  c3_keywords_list,
+  sizeof(c3_keywords_list) / sizeof(char*)
 };
