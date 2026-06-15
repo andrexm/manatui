@@ -12,9 +12,9 @@
 #include "./textarea_syntax_colors.h"
 
 
-/**
- * Colors ----------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Colors 
+// --------------------------------------------------------------------------
 static int global_color_pair_counter = 1;
 static int global_color_id_counter = 16; // avoid overwritting the default colors
 static TextAreaActiveTheme textarea_active_theme; // color ids for the active theme
@@ -39,9 +39,9 @@ int _register_hex_color(int color_id, const char* hex_str) {
 }
 
 
-/**
- * UTF-8 Helper Functions ------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// UTF-8 Helper Functions 
+// --------------------------------------------------------------------------
 
 // Returns the previous valid UTF-8 character start position
 int _textarea_find_char_start(const char* str, int pos) {
@@ -66,9 +66,9 @@ int _textarea_next_char_start(const char* str, int pos, int len) {
 }
 
 
-/**
- * Starting and Ending ---------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Starting and Ending 
+// --------------------------------------------------------------------------
 
 // Start app
 Application* manatui_init() {
@@ -269,9 +269,9 @@ unsigned int ctrl(unsigned int c) {
 }
 
 
-/**
- * Containers ------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Containers 
+// --------------------------------------------------------------------------
 
 // Initialize a container inside a parent
 // Obj is a component based on Container
@@ -443,9 +443,9 @@ void container_apply_style(void* con) {
 }
 
 
-/**
- * Buttons -----------------------------------------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Buttons 
+// --------------------------------------------------------------------------
 
 // Creates a new button instance
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*)) {
@@ -517,9 +517,9 @@ void button_render(Application* app, Button* button) {
 }
 
 
-/**
- * Lists ------------------------------------------------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Lists 
+// --------------------------------------------------------------------------
 
 void _list_draw(List* list) {
   if (list == NULL) return;
@@ -708,9 +708,9 @@ void list_item_add(List* list, const char* line, ...) {
 }
 
 
-/**
- * TextInput -----------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// TextInput 
+// --------------------------------------------------------------------------
 
 // returns the amount of real characters in an interval
 int _textinput_get_visual_distance(const char* str, int start_byte, int end_byte) {
@@ -923,9 +923,9 @@ void textinput_render(Application* app, TextInput* input) {
 }
 
 
-/**
- * TextArea ------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// TextArea 
+// --------------------------------------------------------------------------
 
 // calculates and sets the number of digits for the lines numbers
 void _textarea_set_line_width(TextArea* textarea) {
