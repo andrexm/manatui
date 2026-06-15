@@ -144,9 +144,9 @@ typedef struct {
 } TextArea;
 
 
-/**
- * Application ---------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Application
+// --------------------------------------------------------------------------
 Application* manatui_init();
 void app_add_container(Application* app, void* container);
 void app_focus_on(Application* app, void* con);
@@ -157,9 +157,9 @@ unsigned int ctrl(unsigned int c);
 void app_defer_free(Application* app, void* ptr);
 void* app_alloc(Application* app, void* origin, size_t size);
 
-/**
- * Containers ----------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Containers
+// --------------------------------------------------------------------------
 void container_init(void* obj);
 Container* container_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
 void vcontainer_print(Container* con, bool break_line, int y, int x, const char* format, va_list args);
@@ -167,34 +167,34 @@ void container_print(Container* con, bool break_line, int y, int x, const char* 
 void container_update(void* obj);
 void container_apply_style(void* con);
 
-/**
- * Buttons -------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Buttons
+// --------------------------------------------------------------------------
 Button* button_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
 void button_select(Application* app, Container* btn);
 void button_render(Application* app, Button* button);
 
-/**
- * Lists ---------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// Lists
+// --------------------------------------------------------------------------
 void list_render(Application* app, List* list); 
 List* list_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* title, bool has_border, void (*callback)(int, void*));
 void list_item_add(List* list, const char* line, ...);
 void list_item_select(List* list, const int position);
 
 
-/**
- * TextInput -----------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// TextInput
+// --------------------------------------------------------------------------
 // on creating, renamed title to label, height = 3, and has_border is always true
 TextInput* textinput_create(WINDOW* parent, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
 void textinput_render(Application* app, TextInput* input);
 void textinput_set(TextInput* input, const char* str);
 
 
-/**
- * TextArea ------------------------------------------------------------------
-*/
+// --------------------------------------------------------------------------
+// TextArea
+// --------------------------------------------------------------------------
 TextArea* textarea_create(WINDOW* parent, int height, int width, int start_y, int start_x, const char* label, void (*callback)(int, void*));
 void textarea_render(Application* app, TextArea* textarea);
 void textarea_add_line(TextArea* textarea, const char* line);
