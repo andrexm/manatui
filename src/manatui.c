@@ -40,6 +40,33 @@ int _register_hex_color(int color_id, const char* hex_str) {
 
 
 /**
+ * UTF-8 Helper Functions ------------------------------------------------------------
+*/
+
+// Returns the previous valid UTF-8 character start position
+int _textarea_find_char_start(const char* str, int pos) {
+  if (str == NULL || pos <= 0) return 0;
+  
+  // Move backward until we find a non-continuation byte
+  while (pos > 0 && ((str[pos] & 0xC0) == 0x80)) {
+    pos--;
+  }
+  return pos;
+}
+
+// Returns the next valid UTF-8 character start position
+int _textarea_next_char_start(const char* str, int pos, int len) {
+  if (str == NULL || pos >= len) return len;
+  
+  pos++;
+  while (pos < len && ((str[pos] & 0xC0) == 0x80)) {
+    pos++;
+  }
+  return pos;
+}
+
+
+/**
  * Starting and Ending ---------------------------------------------------------------
 */
 
@@ -62,6 +89,7 @@ Application* manatui_init() {
 
   app->focused_container = NULL;
   app->total_containers = 0;
+  app->defer_list = NULL;
 
   return app;
 }
@@ -126,13 +154,14 @@ void manatui_end(Application* app) {
   endwin();
 
   // free all registered objects
-  if (app->defer_list->pointers != NULL) {
+  if (app->defer_list != NULL && app->defer_list->pointers != NULL) {
     for (int i = 0; i < app->defer_list->total; i++) {
       if (app->defer_list->pointers[i] != NULL) {
         free(app->defer_list->pointers[i]);
       }
     }
     free(app->defer_list->pointers);
+    free(app->defer_list);
   }
   free(app);
 }
@@ -334,7 +363,6 @@ void vcontainer_print(Container* con, bool break_line, int y, int x, const char*
     }
 
     // Draw the character and advance to the next column
-    //waddch(con->dwin, buffer[i]);
     wprintw(con->dwin, "%c", buffer[i]);
 
     if (!is_continuation_byte) {
@@ -377,9 +405,6 @@ void container_update(void* obj) {
       mvwprintw(con->dwin, 0, 2, "< %s >", con->title);
     }
   }
-  /*else {
-    wborder(con->dwin, ' ', ' ', ' ', ' ', ' ', ' ',  ' ', ' ');
-  }*/
 
   // end the colors
   if (con->color_pair_id > 0) {
@@ -956,6 +981,13 @@ void textarea_handle_key_down(TextArea* textarea, int max_visible_lines) {
     // fix the cursor visibility if the new line is very short
     if (textarea->cursor_col < textarea->scroll_col) {
       textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : textarea->cursor_col;
+      // Align scroll_col to valid character start
+      if (textarea->scroll_col > 0 && textarea->cursor_row < textarea->total_lines) {
+        char* line = textarea->lines[textarea->cursor_row];
+        if (line != NULL && textarea->scroll_col < (int)strlen(line)) {
+          textarea->scroll_col = _textarea_find_char_start(line, textarea->scroll_col);
+        }
+      }
     }
 
     // scroll the text if necessary
@@ -980,9 +1012,23 @@ void textarea_handle_key_up(TextArea* textarea) {
     int usable_width = textarea_get_usable_width(textarea);
     if (textarea->cursor_col < textarea->scroll_col) {
       textarea->scroll_col = textarea->cursor_col > 3 ? textarea->cursor_col - 3 : 0;
+      // Align scroll_col to valid character start
+      if (textarea->scroll_col > 0 && textarea->cursor_row < textarea->total_lines) {
+        char* line = textarea->lines[textarea->cursor_row];
+        if (line != NULL && textarea->scroll_col < (int)strlen(line)) {
+          textarea->scroll_col = _textarea_find_char_start(line, textarea->scroll_col);
+        }
+      }
     }
     else if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
       textarea->scroll_col = textarea->cursor_col - usable_width + 1;
+      // Align scroll_col to valid character start
+      if (textarea->scroll_col > 0 && textarea->cursor_row < textarea->total_lines) {
+        char* line = textarea->lines[textarea->cursor_row];
+        if (line != NULL && textarea->scroll_col < (int)strlen(line)) {
+          textarea->scroll_col = _textarea_find_char_start(line, textarea->scroll_col);
+        }
+      }
     }
 
     // returns the text scroll back if necessary
@@ -994,18 +1040,28 @@ void textarea_handle_key_up(TextArea* textarea) {
 
 // Handles cursor position and text scroll after KEY_RIGHT is pressed
 void textarea_handle_key_right(TextArea* textarea) {
+  if (textarea == NULL) return;
+  
   int current_line_len = strlen(textarea->lines[textarea->cursor_row]);
-
   int usable_width = textarea_get_usable_width(textarea);
     
   if (textarea->cursor_col < current_line_len) {
+    // Find next character start (handle UTF-8)
     do {
       textarea->cursor_col++;
-    } while (textarea->cursor_col < current_line_len && (textarea->lines[textarea->cursor_row][textarea->cursor_col] & 0xC0) == 0x80);
+    } while (textarea->cursor_col < current_line_len && 
+             (textarea->lines[textarea->cursor_row][textarea->cursor_col] & 0xC0) == 0x80);
 
     // scroll to the right
     if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
       textarea->scroll_col = textarea->cursor_col - usable_width + 1;
+      // Align scroll_col to a valid character start
+      if (textarea->scroll_col > 0) {
+        textarea->scroll_col = _textarea_find_char_start(
+          textarea->lines[textarea->cursor_row], 
+          textarea->scroll_col
+        );
+      }
     }
   }
   // cursor jumps to the start of the next line
@@ -1024,10 +1080,13 @@ void textarea_handle_key_right(TextArea* textarea) {
 
 // Handles cursor position and text scroll after KEY_LEFT is pressed
 void textarea_handle_key_left(TextArea *textarea) {
+  if (textarea == NULL) return;
+  
   if (textarea->cursor_col > 0) {
     do {
       textarea->cursor_col--;
-    } while (textarea->cursor_col > 0 && (textarea->lines[textarea->cursor_row][textarea->cursor_col] & 0xC0) == 0x80);
+    } while (textarea->cursor_col > 0 && 
+             (textarea->lines[textarea->cursor_row][textarea->cursor_col] & 0xC0) == 0x80);
 
     // scroll to the left
     if (textarea->cursor_col < textarea->scroll_col) {
@@ -1046,6 +1105,11 @@ void textarea_handle_key_left(TextArea *textarea) {
       // calculate where the cursor should be visually
       if (textarea->cursor_col > usable_width) {
         textarea->scroll_col = textarea->cursor_col - usable_width;
+        // Align to valid character start
+        char* line = textarea->lines[textarea->cursor_row];
+        if (line != NULL && textarea->scroll_col < (int)strlen(line)) {
+          textarea->scroll_col = _textarea_find_char_start(line, textarea->scroll_col);
+        }
       } else {
         textarea->scroll_col = 0;
       }
@@ -1131,8 +1195,18 @@ char* _textarea_get_printable_content(TextArea* textarea, int file_line_index) {
   if (textarea == NULL || textarea->lines == NULL || textarea->lines[file_line_index] == NULL) return " ";
 
   int line_len = strlen(textarea->lines[file_line_index]);
-  char* content = (textarea->scroll_col <= line_len)
-                  ? &textarea->lines[file_line_index][textarea->scroll_col]
+  int scroll = textarea->scroll_col;
+  
+  // Ensure scroll_col is within bounds and at a valid character start
+  if (scroll > 0 && scroll < line_len) {
+    // Align to character start if needed
+    if ((textarea->lines[file_line_index][scroll] & 0xC0) == 0x80) {
+      scroll = _textarea_find_char_start(textarea->lines[file_line_index], scroll);
+    }
+  }
+  
+  char* content = (scroll <= line_len)
+                  ? &textarea->lines[file_line_index][scroll]
                   : " ";
   return content;
 }
@@ -1163,6 +1237,13 @@ void _textarea_add_char(TextArea* textarea, unsigned int c) {
   int usable_width = textarea_get_usable_width(textarea);
   if (textarea->cursor_col >= textarea->scroll_col + usable_width) {
     textarea->scroll_col = textarea->cursor_col - usable_width + 1;
+    // Align scroll_col to valid character start
+    if (textarea->scroll_col > 0) {
+      textarea->scroll_col = _textarea_find_char_start(
+        textarea->lines[textarea->cursor_row], 
+        textarea->scroll_col
+      );
+    }
   }
 }
 
@@ -1265,25 +1346,52 @@ void _textarea_handle_tabs(TextArea* textarea) {
 }
 
 bool _char_is_alphanumeric(char c) {
-  return (c == '_') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+  unsigned char uc = (unsigned char)c;
+  return (uc == '_') || (uc >= 'a' && uc <= 'z') || (uc >= 'A' && uc <= 'Z') || (uc >= '0' && uc <= '9') || (uc >= 0xC0);
 }
 
 // detects if the next characters represent a word (a sequence of alphanumeric characters).
-// it returns the amount of characters that compose the word or -1 if it is not a word.
+// it returns the amount of BYTES that compose the word or -1 if it is not a word.
 int _text_starting_word(char* content, int index) {
-  int count = 0;
-  if (content[index] == '_' || (content[index] >= 'a' && content[index] <= 'z') || (content[index] >= 'A' && content[index] <= 'Z')) {
-    // get next word
+  if (content == NULL) return -1;
+  
+  unsigned char c = (unsigned char)content[index];
+  
+  // Check if starts with underscore, ASCII letter, or UTF-8 letter start
+  if (c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= 0xC0)) {
+    int byte_count = 0;
     int len = strlen(content);
-    for (int i = index + 1; i < len; i++) {
-      if (_char_is_alphanumeric(content[i])) {
-        count++;
-      } else {
+    int pos = index;
+    
+    while (pos < len) {
+      unsigned char cur = (unsigned char)content[pos];
+      
+      // Check if character is part of a word
+      if (cur == '_' || (cur >= 'a' && cur <= 'z') || (cur >= 'A' && cur <= 'Z') || 
+          (cur >= '0' && cur <= '9')) {
+        byte_count++;
+        pos++;
+      }
+      // Handle UTF-8 multi-byte characters
+      else if (cur >= 0xC0) {
+        // Get the full UTF-8 character length
+        int char_len = 1;
+        if ((cur & 0xE0) == 0xC0) char_len = 2;
+        else if ((cur & 0xF0) == 0xE0) char_len = 3;
+        else if ((cur & 0xF8) == 0xF0) char_len = 4;
+        
+        // Add all bytes of this character
+        for (int i = 0; i < char_len && pos + i < len; i++) {
+          byte_count++;
+        }
+        pos += char_len;
+      }
+      else {
         break;
       }
     }
-    //return count + index;
-    return count + 1;
+    
+    return byte_count;
   }
   return -1;
 }
@@ -1300,7 +1408,6 @@ const LanguageData* _get_language(Language lang) {
 // returns true if the given word is a keyword of the given language
 bool _text_is_keyword(const char* word, Language lang) {
   const LanguageData* language = _get_language(lang);
-  //const LanguageData language = clang;
   if (word == NULL || language->keywords == NULL || lang == LANG_NONE) {
     return false;
   }
@@ -1342,7 +1449,7 @@ int _is_function_call(TextArea* textarea, char* content, int word_start, int wor
 }
 
 // Prints a word with the appropriate color (keyword, function, or regular text)
-void _print_colored_word(TextArea* textarea, char* word, int word_len, int is_function) {
+void _print_colored_word(TextArea* textarea, const char* word, int word_len, int is_function) {
   if (is_function) {
     wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
     wprintw(textarea->base.dwin, "%.*s", word_len, word);
@@ -1360,7 +1467,7 @@ void _print_colored_word(TextArea* textarea, char* word, int word_len, int is_fu
   }
 }
 
-// print highlighted line content
+// Print highlighted line content
 void _textarea_print_with_color(TextArea* textarea, char* content, int row, int col_start) {
   if (textarea == NULL || content == NULL) return;
 
@@ -1369,16 +1476,31 @@ void _textarea_print_with_color(TextArea* textarea, char* content, int row, int 
   
   int index = 0;
   int len = strlen(content);
+  int max_width = textarea_get_usable_width(textarea);
+  int visual_position = 0;  // Track visual column position separately
 
   // start analyzing symbol by symbol to print each stuff correctly
-  while (index < len) {
+  while (index < len && visual_position < max_width) {
 
     // ------------------
     // print comments
     if (content[index] == '/' && index + 1 < len && content[index + 1] == '/') {
       wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
-      while (index < len) {
-        waddch(textarea->base.dwin, content[index++]);
+      while (index < len && visual_position < max_width) {
+        unsigned char c = (unsigned char)content[index];
+        int char_len = 1;
+        if (c >= 0xC0) {
+          if ((c & 0xE0) == 0xC0) char_len = 2;
+          else if ((c & 0xF0) == 0xE0) char_len = 3;
+          else if ((c & 0xF8) == 0xF0) char_len = 4;
+        }
+        
+        // Print the character
+        for (int j = 0; j < char_len && index + j < len; j++) {
+          waddch(textarea->base.dwin, content[index + j]);
+        }
+        visual_position++;
+        index += char_len;
       }
       wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
       break; // ended printing line
@@ -1388,21 +1510,41 @@ void _textarea_print_with_color(TextArea* textarea, char* content, int row, int 
     // print strings (double quotes)
     if (content[index] == '"') {
       wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
-      waddch(textarea->base.dwin, content[index++]); // print opening quote
+      // Print opening quote
+      waddch(textarea->base.dwin, content[index++]);
+      visual_position++;
 
-      while (index < len && content[index] != '"') {
+      while (index < len && content[index] != '"' && visual_position < max_width) {
         // handle escaped quotes
         if (content[index] == '\\' && index + 1 < len && content[index + 1] == '"') {
           waddch(textarea->base.dwin, content[index++]); // print backslash
-          waddch(textarea->base.dwin, content[index++]); // print quote
+          visual_position++;
+          if (visual_position < max_width) {
+            waddch(textarea->base.dwin, content[index++]); // print quote
+            visual_position++;
+          }
           continue;
         }
-        waddch(textarea->base.dwin, content[index++]);
+        
+        unsigned char c = (unsigned char)content[index];
+        int char_len = 1;
+        if (c >= 0xC0) {
+          if ((c & 0xE0) == 0xC0) char_len = 2;
+          else if ((c & 0xF0) == 0xE0) char_len = 3;
+          else if ((c & 0xF8) == 0xF0) char_len = 4;
+        }
+        
+        for (int j = 0; j < char_len && index + j < len; j++) {
+          waddch(textarea->base.dwin, content[index + j]);
+        }
+        visual_position++;
+        index += char_len;
       }
 
-      // print closing quote if it exists
-      if (index < len && content[index] == '"') {
+      // print closing quote if it exists and we have space
+      if (index < len && content[index] == '"' && visual_position < max_width) {
         waddch(textarea->base.dwin, content[index++]);
+        visual_position++;
       }
       wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
       continue;
@@ -1412,21 +1554,41 @@ void _textarea_print_with_color(TextArea* textarea, char* content, int row, int 
     // print single characters (single quotes)
     if (content[index] == '\'') {
       wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
-      waddch(textarea->base.dwin, content[index++]); // print opening quote
+      // Print opening quote
+      waddch(textarea->base.dwin, content[index++]);
+      visual_position++;
 
-      while (index < len && content[index] != '\'') {
+      while (index < len && content[index] != '\'' && visual_position < max_width) {
         // handle escaped quotes
         if (content[index] == '\\' && index + 1 < len && content[index + 1] == '\'') {
           waddch(textarea->base.dwin, content[index++]); // print backslash
-          waddch(textarea->base.dwin, content[index++]); // print quote
+          visual_position++;
+          if (visual_position < max_width) {
+            waddch(textarea->base.dwin, content[index++]); // print quote
+            visual_position++;
+          }
           continue;
         }
-        waddch(textarea->base.dwin, content[index++]);
+        
+        unsigned char c = (unsigned char)content[index];
+        int char_len = 1;
+        if (c >= 0xC0) {
+          if ((c & 0xE0) == 0xC0) char_len = 2;
+          else if ((c & 0xF0) == 0xE0) char_len = 3;
+          else if ((c & 0xF8) == 0xF0) char_len = 4;
+        }
+        
+        for (int j = 0; j < char_len && index + j < len; j++) {
+          waddch(textarea->base.dwin, content[index + j]);
+        }
+        visual_position++;
+        index += char_len;
       }
 
-      // print closing quote if it exists
-      if (index < len && content[index] == '\'') {
+      // print closing quote if it exists and we have space
+      if (index < len && content[index] == '\'' && visual_position < max_width) {
         waddch(textarea->base.dwin, content[index++]);
+        visual_position++;
       }
       wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
       continue;
@@ -1436,8 +1598,9 @@ void _textarea_print_with_color(TextArea* textarea, char* content, int row, int 
     // printing numbers (digits)
     if (isdigit((unsigned char)content[index])) {
       wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
-      while (index < len && isdigit((unsigned char)content[index])) {
+      while (index < len && isdigit((unsigned char)content[index]) && visual_position < max_width) {
         waddch(textarea->base.dwin, content[index++]);
+        visual_position++;
       }
       wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
       continue;
@@ -1448,6 +1611,7 @@ void _textarea_print_with_color(TextArea* textarea, char* content, int row, int 
     if (_is_special_char(content[index])) {
       wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
       waddch(textarea->base.dwin, content[index++]);
+      visual_position++;
       wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
       continue;
     }
@@ -1455,31 +1619,69 @@ void _textarea_print_with_color(TextArea* textarea, char* content, int row, int 
     // ------------------
     // print words (keywords, function names, variable names)
     int word_len = _text_starting_word(content, index);
-    if (word_len > 0) {
+    if (word_len > 0 && index + word_len <= len) {
       // extract the word
       char word[256];
-      for (int i = 0; i < word_len && i < 255; i++) {
-        word[i] = content[index + i];
+      int word_pos = 0;
+      
+      for (int i = index; i < index + word_len && word_pos < 255; i++) {
+        word[word_pos++] = content[i];
       }
-      word[word_len] = '\0';
+      word[word_pos] = '\0';
       
       // check if this word is a function call/declaration
       int is_function = _is_function_call(textarea, content, index, word_len, len);
       
       // print the word with appropriate color
-      _print_colored_word(textarea, word, word_len, is_function);
+      if (is_function) {
+        wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
+        for (int i = 0; i < word_len && visual_position < max_width; i++) {
+          waddch(textarea->base.dwin, content[index + i]);
+        }
+        wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
+      } 
+      else if (_text_is_keyword(word, textarea->language)) {
+        wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
+        for (int i = 0; i < word_len && visual_position < max_width; i++) {
+          waddch(textarea->base.dwin, content[index + i]);
+        }
+        wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
+      }
+      else {
+        wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+        for (int i = 0; i < word_len && visual_position < max_width; i++) {
+          waddch(textarea->base.dwin, content[index + i]);
+        }
+        wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+      }
       
-      // move index past the word
+      visual_position++;
       index += word_len;
       continue;
     }
 
     // ------------------
-    // print any remaining character (spaces, operators not caught by special chars, etc.)
+    // print any remaining character (spaces, etc.)
     // This ensures we don't skip any characters
-    wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
-    waddch(textarea->base.dwin, content[index++]);
-    wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+    if (visual_position < max_width) {
+      unsigned char c = (unsigned char)content[index];
+      int char_len = 1;
+      if (c >= 0xC0) {
+        if ((c & 0xE0) == 0xC0) char_len = 2;
+        else if ((c & 0xF0) == 0xE0) char_len = 3;
+        else if ((c & 0xF8) == 0xF0) char_len = 4;
+      }
+      
+      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+      for (int j = 0; j < char_len && index + j < len; j++) {
+        waddch(textarea->base.dwin, content[index + j]);
+      }
+      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+      visual_position++;
+      index += char_len;
+    } else {
+      break; // Reached max width, stop printing
+    }
   }
 }
 
@@ -1492,7 +1694,14 @@ void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usabl
     int file_line_index = textarea->scroll_row + i;
     int screen_row = i + 1;
 
-    // if the line exists, draw the line numebr and the text
+    // First, clear the line number area for this row
+    if (textarea->show_line_numbers) {
+      for (int j = 0; j < textarea->line_number_width + 1; j++) {
+        mvwprintw(textarea->base.dwin, screen_row, 1 + j, " ");
+      }
+    }
+
+    // if the line exists, draw the line number and the text
     if (file_line_index < textarea->total_lines) {
       // print with specific content color if it is set
       if (textarea->content_color != NULL) {
@@ -1511,22 +1720,28 @@ void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usabl
       // calculate the exact limit of bytes to avoid breaking UTF-8 chars visually
       int byte_limit = 0;
       int visual_count = 0; // how many characters to print
-      while (content[byte_limit] != '\0' && visual_count < usable_width) {
+      int content_len = strlen(content);
+      
+      while (byte_limit < content_len && visual_count < usable_width) {
+        unsigned char c = (unsigned char)content[byte_limit];
         // if it is not a continuation byte, add 1 to the visual_count
-        if ((content[byte_limit] & 0xC0) != 0x80) {
+        if ((c & 0xC0) != 0x80) {
           visual_count++;
         }
         byte_limit++;
       }
-
-      if (textarea->use_theme_colors) {
-        for (int i = 0; i < visual_count; i++) {
-          //i = _theme_next_word(content, i);
-          int is_word = 0;
-          if (_text_starting_word(content, i) > 0) {
-            is_word = _text_starting_word(content, i);
-          }
+      
+      // Make sure we don't cut in the middle of a UTF-8 character
+      if (byte_limit < content_len && (content[byte_limit] & 0xC0) == 0x80) {
+        // Go back to the start of the current character
+        while (byte_limit > 0 && (content[byte_limit] & 0xC0) == 0x80) {
+          byte_limit--;
         }
+      }
+
+      // Clear the content area before printing (prevents leftover characters)
+      for (int j = 0; j < usable_width; j++) {
+        mvwprintw(textarea->base.dwin, screen_row, textarea->line_number_width + 2 + j, " ");
       }
 
       // ------------------------------------------------------
@@ -1551,26 +1766,16 @@ void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usabl
         );
       }
 
-      // needed to update when using syntax highlighting
+      // FIX: understand what is printing more than enough characters on the textarea,
+      // FIX: the lines continue to be printed over the next physical line before
+      // FIX: the code printing the correct lines over there or adding empty spaces.
+      // FIX: additionaly, they are printed even at the borders, the reason why there
+      // FIX: is this additional line below.
+      // fix borders
       container_update(textarea);
-  
+
       // END PRINTING CONTENT
       // -------------------------------------------------------
-
-      // manually add empty spaces to the rest of the line to remove "virtual" characters
-      // because C functions are a nightmare to handle this
-      int spaces_to_fill = usable_width - visual_count;
-      if (spaces_to_fill > 0) {
-        container_print(
-          (Container*)textarea,
-          FALSE,
-          screen_row,
-          textarea->line_number_width + visual_count + 2,
-          "%*s",
-          spaces_to_fill,
-          ""
-        );
-      }
 
       // if we have the content specific color active
       if (textarea->content_color != NULL) {
@@ -1594,11 +1799,6 @@ void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usabl
         usable_width,
         ""
       );
-
-      // clear the line number
-      if (textarea->show_line_numbers) {
-        mvwprintw(textarea->base.dwin, screen_row, 1, "%*s", textarea->line_number_width, "");
-      }
     }
   }
 }
@@ -1641,26 +1841,61 @@ void _textarea_actions(void* context, unsigned int c) {
   }
   container_update(textarea);
 
+  // Ensure scroll_col is always at a valid character start
+  if (textarea->scroll_col > 0 && textarea->cursor_row >= 0 && 
+      textarea->cursor_row < textarea->total_lines) {
+    char* line = textarea->lines[textarea->cursor_row];
+    if (line != NULL && textarea->scroll_col < (int)strlen(line)) {
+      // Check if we're at a continuation byte
+      if ((line[textarea->scroll_col] & 0xC0) == 0x80) {
+        textarea->scroll_col = _textarea_find_char_start(line, textarea->scroll_col);
+      }
+    }
+  }
+
+  // Also ensure cursor_col is valid
+  if (textarea->cursor_row >= 0 && textarea->cursor_row < textarea->total_lines) {
+    char* line = textarea->lines[textarea->cursor_row];
+    if (line != NULL) {
+      int line_len = strlen(line);
+      if (textarea->cursor_col > line_len) {
+        textarea->cursor_col = line_len;
+      }
+      // Ensure cursor is at a valid character start
+      if (textarea->cursor_col > 0 && textarea->cursor_col < line_len &&
+          (line[textarea->cursor_col] & 0xC0) == 0x80) {
+        textarea->cursor_col = _textarea_find_char_start(line, textarea->cursor_col);
+      }
+    }
+  }
+
   // render the visible text and line numbers
   _textarea_draw_content(textarea, max_visible_lines, usable_width);
 
   // update cursor
-  int visual_y = textarea->cursor_row - textarea->scroll_row + 1;
-
-  // count real characters instead of pure bytes LOL
-  int visual_distance = _textarea_get_visual_distance(
-    textarea->lines[textarea->cursor_row],
-    textarea->scroll_col,
-    textarea->cursor_col
-  );
-  int visual_x = textarea->line_number_width + visual_distance + 2; 
+  if (textarea->cursor_row >= 0 && textarea->cursor_row < textarea->total_lines) {
+    int visual_y = textarea->cursor_row - textarea->scroll_row + 1;
+    
+    if (visual_y >= 1 && visual_y <= textarea->base.height - 2) {
+      // count real characters instead of pure bytes
+      int visual_distance = _textarea_get_visual_distance(
+        textarea->lines[textarea->cursor_row],
+        textarea->scroll_col,
+        textarea->cursor_col
+      );
+      int visual_x = textarea->line_number_width + visual_distance + 2;
+      
+      // make sure cursor stays within bounds
+      if (visual_x >= 1 && visual_x < textarea->base.width) {
+        wmove(textarea->base.dwin, visual_y, visual_x);
+      }
+    }
+  }
 
   // after pressing 'i' when the textarea is disabled
   if (c == textarea->enable_key) {
     textarea->disabled = FALSE;
   }
-
-  wmove(textarea->base.dwin, visual_y, visual_x);
 
   // update screen buffers
   wnoutrefresh(textarea->base.dwin);
@@ -1863,6 +2098,37 @@ void textarea_add_line(TextArea* textarea, const char* line) {
 
   // update lines total
   textarea->total_lines++;
+}
+
+// Read content from a file and load it inside the Textarea
+void textarea_from_file(TextArea* textarea, const char* filepath, bool create_if_not_exists) {
+  FILE* file = fopen(filepath, "r");
+
+  // file not found and you want to create in this case
+  if (file == NULL && create_if_not_exists) {
+    file = fopen(filepath, "w+");
+    if (file == NULL) {
+      char err_msg[512];
+      sprintf(err_msg, "// Critical Error: without permission to create file '%s'", filepath);
+      textarea_add_line(textarea, err_msg);
+      return;
+    }
+  }
+  else if (file == NULL) {
+    char err_msg[512];
+    sprintf(err_msg, "// Critical Error: file not found '%s'", filepath);
+    textarea_add_line(textarea, err_msg);
+    return;
+  }
+    
+  // add file content to the textarea
+  char buffer[1024];
+  while (fgets(buffer, sizeof(buffer), file)) {
+    buffer[strcspn(buffer, "\r\n")] = '\0';
+    textarea_add_line(textarea, buffer);
+  }
+
+  fclose(file);
 }
 
 // free memory requested by the textarea
