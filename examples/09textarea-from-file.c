@@ -46,7 +46,7 @@ int main() {
   textarea->content_color = "#6b7a73";
   textarea->tabs_for_spaces = TRUE;
   textarea->use_theme_colors = TRUE;
-  textarea->language = LANG_C;
+  textarea->language = LANG_C3;
 
   // add some lines to the textarea
   textarea_from_file(textarea, "src/manatui.c", false);
