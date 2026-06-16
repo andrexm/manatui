@@ -1,21 +1,33 @@
 #include "../manatui.h"
 #include <ncurses.h>
+#include <stdlib.h>
 
 typedef struct {
   Application* app;
   TextArea* textarea;
+  const char* filepath;
 } Context;
 
 // activated when the textarea has focus - in this example, the entire time
-void handle_my_textarea(int c, void* context) {
-  if (context == NULL) return;
-  TextArea* textarea = (TextArea*)context;
+void handle_my_textarea(int c, void* con) {
+  if (con== NULL) return;
+  Context* context = (Context*)con;
+  TextArea* textarea = context->textarea;
+  const char* filepath = context->filepath;
 
   // handle ESC key
   if (c == 27) {
     // when the user press ESC, the textarea will be disabled
     // but if the user press 'i' (see line 42) the textarea will be enable again
     textarea->disabled = TRUE;
+  }
+
+  // save the file when pressing CTRL+S
+  if (c == ctrl('s')) {
+    bool success = textarea_save_to_file(textarea, filepath);
+    if (!success) {
+      // error while saving content to the file
+    }
   }
 }
 
@@ -36,8 +48,17 @@ int main() {
     handle_my_textarea // on focus callback
   );
 
+  // creating a context variable to give the textarea actions (when focused)
+  // visibility over the app, filepath and the textarea itself.
+  const char* filepath = "my_code.c";
+  Context* context = (Context*)malloc(sizeof(Context));
+  context->filepath = filepath;
+  context->app = app;
+  context->textarea = textarea;
+
+  // textarea settings
   textarea->base.has_border = TRUE;
-  textarea->base.user_data = textarea; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
+  textarea->base.user_data = context; // if you want to add custom behavior to the textarea, user_data gives visibility to the object it receives
   textarea->show_line_numbers = TRUE; // show the column of numbers
   textarea->line_number_width = 4; // opitional: set up the width of the column of numbers
   textarea->enable_key = 'i'; // if you set this, when disabled, if the user press 'i' then the textarea will be enabled
@@ -46,10 +67,13 @@ int main() {
   textarea->content_color = "#6b7a73";
   textarea->tabs_for_spaces = TRUE;
   textarea->use_theme_colors = TRUE;
-  textarea->language = LANG_C3;
+  textarea->language = LANG_C;
 
-  // add some lines to the textarea
-  textarea_from_file(textarea, "src/manatui.c", false);
+  // add content to the textarea from a file.
+  // if the file doesn't exist, 'true' tells to create an empty one, false would prevent from this.
+  // if you press "CTRL+S", the file will be saved into that file, and it will try to create it if it doesn't exist.
+  // this action of saving is defined in this file, on the "handle_my_textarea" function.
+  textarea_from_file(textarea, filepath, true);
 
   app_focus_on(app, textarea); // start focus on it
   textarea_render(app, textarea); // draw the textarea
