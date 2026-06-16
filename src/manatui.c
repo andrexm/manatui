@@ -2136,6 +2136,30 @@ void textarea_from_file(TextArea* textarea, const char* filepath, bool create_if
   fclose(file);
 }
 
+// Save textarea content to a file
+bool textarea_save_to_file(TextArea* textarea, const char* filepath) {
+  FILE* file = fopen(filepath, "w");
+
+  // file not found and not possible to create it
+  if (file == NULL) {
+    return false;
+  }
+
+  // add each line from the textarea to the file
+  for (int i = 0; i < textarea->total_lines; i++) {
+    if (textarea->lines[i] != NULL) {
+      fputs(textarea->lines[i], file);
+    }
+    // add a \n at the end of every line to avoid the file to be a single giant line
+    fputs("\n", file);
+  }
+
+  fclose(file);
+
+  // file was saved
+  return true;
+}
+
 // free memory requested by the textarea
 void textarea_destroy(TextArea* textarea) {
   if (textarea == NULL) return;
