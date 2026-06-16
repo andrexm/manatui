@@ -203,4 +203,5 @@ void textarea_handle_key_down(TextArea* textarea, int max_visible_lines);
 void textarea_handle_key_up(TextArea* textarea);
 void textarea_handle_key_enter(TextArea* textarea);
 int textarea_get_usable_width(TextArea* textarea);
-void textarea_from_file(TextArea* textarea, const char* filename, bool create_if_not_exists);
+void textarea_from_file(TextArea* textarea, const char* filepath, bool create_if_not_exists);
+bool textarea_save_to_file(TextArea* textarea, const char* filepath);
