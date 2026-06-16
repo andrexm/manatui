@@ -8,7 +8,6 @@ typedef struct {
 
 // activated when the textarea has focus - in this example, the entire time
 void handle_my_textarea(int c, void* context) {
-  if (context == NULL) return;
   TextArea* textarea = (TextArea*)context;
 
   // handle ESC key
@@ -51,7 +50,7 @@ int main() {
   // add some lines to the textarea
   textarea_add_line(textarea, "int a = 78;");
   textarea_add_line(textarea, "// int a = 78;");
-  textarea_add_line(textarea, "static void main(\"\")");
+  textarea_add_line(textarea, "static void main()");
 
   app_focus_on(app, textarea); // start focus on it
   textarea_render(app, textarea); // draw the textarea
