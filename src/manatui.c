@@ -175,6 +175,9 @@ void app_key_handle(Application* app, unsigned int c) {
     exit(0);
   }
 
+  // used to check if the focused container is changed after handling the current container focus
+  Container* initial_con = app->focused_container;
+
   // global actions
   switch (c) {
     case '\t':
@@ -186,9 +189,15 @@ void app_key_handle(Application* app, unsigned int c) {
     app->focused_container->on_focus(c, app->focused_container->user_data);
   }
 
+  unsigned int new_c = c;
+  // the container actions function receives 0 if the container was changed to prevent processing the old key press
+  if (initial_con != app->focused_container) {
+    new_c = 0;
+  }
+
   // handle container default actions (a list handles arrow keys, for example)
   if (app->focused_container != NULL && app->focused_container->actions != NULL) {
-    app->focused_container->actions(app->focused_container, c);
+    app->focused_container->actions(app->focused_container, new_c);
   }
 }
 
