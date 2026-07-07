@@ -319,68 +319,25 @@ Container* container_create(WINDOW* parent, int height, int width, int start_y, 
 
 // print text on the container using va_list
 void vcontainer_print(Container* con, bool break_line, int y, int x, const char* format, va_list args) {
-  if (!con || !con->dwin) return;
+    if (!con || !con->dwin) return;
 
-  // 1. Finding the size for the buffer
-  va_list args_copy;
-  va_copy(args_copy, args);
-  // when we give NULL and 0, the function return the necessary size for our buffer! (without considering the '\0')
-  int necessary_size = vsnprintf(NULL, 0, format, args_copy);
-  va_end(args_copy);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int necessary_size = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+    if (necessary_size < 0) return;
 
-  if (necessary_size < 0) return; // formatation error
+    char* buffer = malloc(necessary_size + 1);
+    if (!buffer) return;
 
-  // 2. Alocating memory (considering the '\0')
-  char* buffer = (char*)malloc(necessary_size + 1);
-  if (buffer == NULL) return; // system memory error
+    int size = break_line ? (necessary_size + 1) : (con->width - 1);
+    vsnprintf(buffer, size, format, args);
 
-  // 3. Finally, truly formating the text
-  int size = break_line ? (necessary_size + 1) : (con->width - 1); // this prevents the text from breaking line if we don't want it to break
-  vsnprintf(buffer, size, format, args);
+    // instead of iterating byte‑by‑byte, print the whole string at once.
+    wmove(con->dwin, y, x);
+    wprintw(con->dwin, "%.*s", con->width - x - 1, buffer); // leave room for right border
 
-  // 4. Calculate the container internal limits
-  int max_y = con->height - 1;
-  int max_x = con->width - 1;
-
-  // put the cursor on the desired position
-  int cur_y = y;
-  int cur_x = x;
-  wmove(con->dwin, cur_y, cur_x);
-
-  // 5. Print each character considering the borders
-  for (int i = 0; buffer[i] != '\0'; i++) {
-    // if we have a \n
-    if (buffer[i] == '\n') {
-      cur_y++;
-      cur_x = 1; // go after the border
-      if (cur_y >= max_y) break; // avoid going after the container view ending
-      wmove(con->dwin, cur_y, cur_x);
-      continue;
-    }
-
-    // veriry continuation bits
-    bool is_continuation_byte = (buffer[i] & 0xC0) == 0x80;
-    
-    // jump to next line if we find a right border
-    if (!is_continuation_byte) {
-      if (cur_x == max_x) {
-        cur_y++;
-        cur_x = 1;
-        if (cur_y >= max_y) break;
-        wmove(con->dwin, cur_y, cur_x);
-      }
-    }
-
-    // Draw the character and advance to the next column
-    wprintw(con->dwin, "%c", buffer[i]);
-
-    if (!is_continuation_byte) {
-      cur_x++;
-    }
-  }
-
-  // 6. Freeing the memory
-  free(buffer);
+    free(buffer);
 }
 
 // print text on the container
@@ -1481,222 +1438,156 @@ void _print_colored_word(TextArea* textarea, const char* word, int word_len, int
   }
 }
 
-// Print highlighted line content
+// Print highlighted line content (UTF‑8 safe)
 void _textarea_print_with_color(TextArea* textarea, char* content, int row, int col_start) {
-  if (textarea == NULL || content == NULL) return;
+    if (textarea == NULL || content == NULL) return;
 
-  // move the cursor to the correct position to start printing
-  wmove(textarea->base.dwin, row, col_start);
-  
-  int index = 0;
-  int len = strlen(content);
-  int max_width = textarea_get_usable_width(textarea);
-  int visual_position = 0;  // Track visual column position separately
+    wmove(textarea->base.dwin, row, col_start);
 
-  // start analyzing symbol by symbol to print each stuff correctly
-  while (index < len && visual_position < max_width) {
+    int index = 0;
+    int len = strlen(content);
+    int max_width = textarea_get_usable_width(textarea);
+    int visual_position = 0;
 
-    // ------------------
-    // print comments
-    if (content[index] == '/' && index + 1 < len && content[index + 1] == '/') {
-      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
-      while (index < len && visual_position < max_width) {
-        unsigned char c = (unsigned char)content[index];
-        int char_len = 1;
-        if (c >= 0xC0) {
-          if ((c & 0xE0) == 0xC0) char_len = 2;
-          else if ((c & 0xF0) == 0xE0) char_len = 3;
-          else if ((c & 0xF8) == 0xF0) char_len = 4;
+    while (index < len && visual_position < max_width) {
+        // ---- comments -------------------------------------------------
+        if (content[index] == '/' && index + 1 < len && content[index + 1] == '/') {
+            wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
+            // print everything from here to end of line as a single string
+            wprintw(textarea->base.dwin, "%s", content + index);
+            wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
+            break;  // line ends
         }
-        
-        // Print the character
-        for (int j = 0; j < char_len && index + j < len; j++) {
-          waddch(textarea->base.dwin, content[index + j]);
-        }
-        visual_position++;
-        index += char_len;
-      }
-      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.comment_id));
-      break; // ended printing line
-    }
-    
-    // ------------------
-    // print strings (double quotes)
-    if (content[index] == '"') {
-      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
-      // Print opening quote
-      waddch(textarea->base.dwin, content[index++]);
-      visual_position++;
 
-      while (index < len && content[index] != '"' && visual_position < max_width) {
-        // handle escaped quotes
-        if (content[index] == '\\' && index + 1 < len && content[index + 1] == '"') {
-          waddch(textarea->base.dwin, content[index++]); // print backslash
-          visual_position++;
-          if (visual_position < max_width) {
-            waddch(textarea->base.dwin, content[index++]); // print quote
+        // ---- double‑quoted strings ------------------------------------
+        if (content[index] == '"') {
+            wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
+            int start = index;
+            // find closing quote (handling escaped quotes)
+            while (index < len) {
+                if (content[index] == '"' && (index == start || content[index-1] != '\\')) {
+                    break;
+                }
+                index++;
+            }
+            if (index < len && content[index] == '"') {
+                index++;  // include closing quote
+            }
+            // print the whole string at once
+            wprintw(textarea->base.dwin, "%.*s", index - start, content + start);
+            // count visual characters in this segment
+            int seg_visual = _textarea_get_visual_distance(content, start, index);
+            visual_position += seg_visual;
+            wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
+            continue;
+        }
+
+        // ---- single‑quoted characters --------------------------------
+        if (content[index] == '\'') {
+            wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
+            int start = index;
+            while (index < len) {
+                if (content[index] == '\'' && (index == start || content[index-1] != '\\')) {
+                    break;
+                }
+                index++;
+            }
+            if (index < len && content[index] == '\'') {
+                index++;
+            }
+            wprintw(textarea->base.dwin, "%.*s", index - start, content + start);
+            int seg_visual = _textarea_get_visual_distance(content, start, index);
+            visual_position += seg_visual;
+            wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
+            continue;
+        }
+
+        // ---- numbers (digits) -----------------------------------------
+        if (isdigit((unsigned char)content[index])) {
+            wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
+            int start = index;
+            while (index < len && isdigit((unsigned char)content[index])) {
+                index++;
+            }
+            wprintw(textarea->base.dwin, "%.*s", index - start, content + start);
+            int seg_visual = _textarea_get_visual_distance(content, start, index);
+            visual_position += seg_visual;
+            wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
+            continue;
+        }
+
+        // ---- special characters ---------------------------------------
+        if (_is_special_char(content[index])) {
+            wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
+            int start = index;
+            // special characters are usually single-byte, but we handle multi-byte anyway
+            int char_len = 1;
+            unsigned char c = (unsigned char)content[index];
+            if (c >= 0xC0) {
+                if ((c & 0xE0) == 0xC0) char_len = 2;
+                else if ((c & 0xF0) == 0xE0) char_len = 3;
+                else if ((c & 0xF8) == 0xF0) char_len = 4;
+            }
+            index += char_len;
+            wprintw(textarea->base.dwin, "%.*s", char_len, content + start);
+            visual_position++;  // each special char occupies one column
+            wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
+            continue;
+        }
+
+        // ---- words (keywords, function names) -------------------------
+        int word_len = _text_starting_word(content, index);
+        if (word_len > 0 && index + word_len <= len) {
+            int start = index;
+            index += word_len;
+            // extract the word as a null‑terminated string
+            char word[256];
+            int wlen = word_len < 255 ? word_len : 255;
+            strncpy(word, content + start, wlen);
+            word[wlen] = '\0';
+
+            // check if it's a function call
+            int is_function = _is_function_call(textarea, content, start, word_len, len);
+
+            if (is_function) {
+                wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
+                wprintw(textarea->base.dwin, "%s", word);
+                wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
+            } else if (_text_is_keyword(word, textarea->language)) {
+                wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
+                wprintw(textarea->base.dwin, "%s", word);
+                wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
+            } else {
+                wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+                wprintw(textarea->base.dwin, "%s", word);
+                wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+            }
+
+            // count visual characters in the word
+            int seg_visual = _textarea_get_visual_distance(content, start, index);
+            visual_position += seg_visual;
+            continue;
+        }
+
+        // ---- any remaining character (spaces, etc.) -------------------
+        // Print a single character (or multi‑byte sequence) as text color
+        if (visual_position < max_width) {
+            unsigned char c = (unsigned char)content[index];
+            int char_len = 1;
+            if (c >= 0xC0) {
+                if ((c & 0xE0) == 0xC0) char_len = 2;
+                else if ((c & 0xF0) == 0xE0) char_len = 3;
+                else if ((c & 0xF8) == 0xF0) char_len = 4;
+            }
+            wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+            wprintw(textarea->base.dwin, "%.*s", char_len, content + index);
+            wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
+            index += char_len;
             visual_position++;
-          }
-          continue;
+        } else {
+            break;
         }
-        
-        unsigned char c = (unsigned char)content[index];
-        int char_len = 1;
-        if (c >= 0xC0) {
-          if ((c & 0xE0) == 0xC0) char_len = 2;
-          else if ((c & 0xF0) == 0xE0) char_len = 3;
-          else if ((c & 0xF8) == 0xF0) char_len = 4;
-        }
-        
-        for (int j = 0; j < char_len && index + j < len; j++) {
-          waddch(textarea->base.dwin, content[index + j]);
-        }
-        visual_position++;
-        index += char_len;
-      }
-
-      // print closing quote if it exists and we have space
-      if (index < len && content[index] == '"' && visual_position < max_width) {
-        waddch(textarea->base.dwin, content[index++]);
-        visual_position++;
-      }
-      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.string_id));
-      continue;
     }
-
-    // ------------------
-    // print single characters (single quotes)
-    if (content[index] == '\'') {
-      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
-      // Print opening quote
-      waddch(textarea->base.dwin, content[index++]);
-      visual_position++;
-
-      while (index < len && content[index] != '\'' && visual_position < max_width) {
-        // handle escaped quotes
-        if (content[index] == '\\' && index + 1 < len && content[index + 1] == '\'') {
-          waddch(textarea->base.dwin, content[index++]); // print backslash
-          visual_position++;
-          if (visual_position < max_width) {
-            waddch(textarea->base.dwin, content[index++]); // print quote
-            visual_position++;
-          }
-          continue;
-        }
-        
-        unsigned char c = (unsigned char)content[index];
-        int char_len = 1;
-        if (c >= 0xC0) {
-          if ((c & 0xE0) == 0xC0) char_len = 2;
-          else if ((c & 0xF0) == 0xE0) char_len = 3;
-          else if ((c & 0xF8) == 0xF0) char_len = 4;
-        }
-        
-        for (int j = 0; j < char_len && index + j < len; j++) {
-          waddch(textarea->base.dwin, content[index + j]);
-        }
-        visual_position++;
-        index += char_len;
-      }
-
-      // print closing quote if it exists and we have space
-      if (index < len && content[index] == '\'' && visual_position < max_width) {
-        waddch(textarea->base.dwin, content[index++]);
-        visual_position++;
-      }
-      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.char_id));
-      continue;
-    }
-
-    // ------------------
-    // printing numbers (digits)
-    if (isdigit((unsigned char)content[index])) {
-      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
-      while (index < len && isdigit((unsigned char)content[index]) && visual_position < max_width) {
-        waddch(textarea->base.dwin, content[index++]);
-        visual_position++;
-      }
-      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.number_id));
-      continue;
-    }
-
-    // ------------------
-    // printing special characters (operators, brackets, etc.)
-    if (_is_special_char(content[index])) {
-      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
-      waddch(textarea->base.dwin, content[index++]);
-      visual_position++;
-      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.symbol_id));
-      continue;
-    }
-    
-    // ------------------
-    // print words (keywords, function names, variable names)
-    int word_len = _text_starting_word(content, index);
-    if (word_len > 0 && index + word_len <= len) {
-      // extract the word
-      char word[256];
-      int word_pos = 0;
-      
-      for (int i = index; i < index + word_len && word_pos < 255; i++) {
-        word[word_pos++] = content[i];
-      }
-      word[word_pos] = '\0';
-      
-      // check if this word is a function call/declaration
-      int is_function = _is_function_call(textarea, content, index, word_len, len);
-      
-      // print the word with appropriate color
-      if (is_function) {
-        wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
-        for (int i = 0; i < word_len && visual_position < max_width; i++) {
-          waddch(textarea->base.dwin, content[index + i]);
-        }
-        wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.function_id));
-      } 
-      else if (_text_is_keyword(word, textarea->language)) {
-        wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
-        for (int i = 0; i < word_len && visual_position < max_width; i++) {
-          waddch(textarea->base.dwin, content[index + i]);
-        }
-        wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.keyword_id));
-      }
-      else {
-        wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
-        for (int i = 0; i < word_len && visual_position < max_width; i++) {
-          waddch(textarea->base.dwin, content[index + i]);
-        }
-        wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
-      }
-      
-      visual_position++;
-      index += word_len;
-      continue;
-    }
-
-    // ------------------
-    // print any remaining character (spaces, etc.)
-    // This ensures we don't skip any characters
-    if (visual_position < max_width) {
-      unsigned char c = (unsigned char)content[index];
-      int char_len = 1;
-      if (c >= 0xC0) {
-        if ((c & 0xE0) == 0xC0) char_len = 2;
-        else if ((c & 0xF0) == 0xE0) char_len = 3;
-        else if ((c & 0xF8) == 0xF0) char_len = 4;
-      }
-      
-      wattron(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
-      for (int j = 0; j < char_len && index + j < len; j++) {
-        waddch(textarea->base.dwin, content[index + j]);
-      }
-      wattroff(textarea->base.dwin, COLOR_PAIR(textarea_active_theme.text_id));
-      visual_position++;
-      index += char_len;
-    } else {
-      break; // Reached max width, stop printing
-    }
-  }
 }
 
 void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usable_width) {
