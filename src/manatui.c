@@ -934,8 +934,10 @@ int _textarea_get_visual_distance(const char* str, int start_byte, int end_byte)
 }
 
 // Handles cursor position and text scroll after KEY_DOWN is pressed
-void textarea_handle_key_down(TextArea* textarea, int max_visible_lines) { 
+bool textarea_handle_key_down(TextArea* textarea, int max_visible_lines) { 
+  bool redraw_box = FALSE;
   if (textarea->total_lines - 1 > textarea->cursor_row) {
+
     textarea->cursor_row++;
 
     // if the bottom line is smaller than the current
@@ -954,13 +956,16 @@ void textarea_handle_key_down(TextArea* textarea, int max_visible_lines) {
           textarea->scroll_col = _textarea_find_char_start(line, textarea->scroll_col);
         }
       }
+      redraw_box = TRUE;
     }
 
     // scroll the text if necessary
     if (textarea->cursor_row >= textarea->scroll_row + max_visible_lines) {
       textarea->scroll_row = textarea->cursor_row - max_visible_lines + 1;
+      redraw_box = TRUE;
     }
   }
+  return redraw_box;
 }
 
 // Handles cursor position and text scroll after KEY_UP is pressed
@@ -1671,11 +1676,6 @@ void _textarea_draw_content(TextArea* textarea, int max_visible_lines, int usabl
         );
       }
 
-      // FIX: understand what is printing more than enough characters on the textarea,
-      // FIX: the lines continue to be printed over the next physical line before
-      // FIX: the code printing the correct lines over there or adding empty spaces.
-      // FIX: additionaly, they are printed even at the borders, the reason why there
-      // FIX: is this additional line below.
       // fix borders
       container_update(textarea);
 
@@ -1723,8 +1723,12 @@ void _textarea_actions(void* context, unsigned int c) {
     _textarea_set_line_width(textarea);
   }
 
+  int update_box = FALSE;
   switch (c) {
-    case KEY_DOWN: textarea_handle_key_down(textarea, max_visible_lines); break; // move cursor DOWN
+    // move cursor DOWN
+    case KEY_DOWN:
+      update_box = textarea_handle_key_down(textarea, max_visible_lines);
+      break;
     case KEY_UP: textarea_handle_key_up(textarea); break; // move cursor UP
     case KEY_RIGHT: textarea_handle_key_right(textarea); break; // move cursor RIGHT
     case KEY_LEFT: textarea_handle_key_left(textarea); break; // move cursor LEFT
@@ -1744,7 +1748,8 @@ void _textarea_actions(void* context, unsigned int c) {
       }
       break;
   }
-  container_update(textarea);
+
+  if (update_box) container_update(textarea);
 
   // Ensure scroll_col is always at a valid character start
   if (textarea->scroll_col > 0 && textarea->cursor_row >= 0 && 
